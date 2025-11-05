@@ -7,11 +7,15 @@ import Stack from "@mui/material/Stack";
 import Switch from "@mui/material/Switch";
 import Divider from "@mui/material/Divider";
 import Button from "@mui/material/Button";
+import { useNavigate } from "react-router-dom";
 
 export default function Settings() {
   const [notifications, setNotifications] = React.useState(true);
   const [emailDigest, setEmailDigest] = React.useState(false);
   const [darkMode, setDarkMode] = React.useState(false);
+  const navigate = useNavigate();
+
+
 
   const settingsSections = [
     {
