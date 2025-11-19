@@ -16,7 +16,7 @@ export const chartsCustomizations: ChartsComponents<Theme> = {
           fill: gray[500],
           fontWeight: 500,
         },
-        ...theme.applyStyles("dark", {
+        ...theme.applyStyles("light", {
           [`& .${axisClasses.line}`]: {
             stroke: gray[700],
           },

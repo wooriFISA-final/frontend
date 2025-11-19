@@ -122,6 +122,8 @@ export default function CrmMainDashboard() {
         {statCardsData.map((card, index) => (
           <Grid key={index} item xs={12} sm={6} lg={3}>
             <CrmStatCard
+              // 💡 배경색을 흰색으로 강제 지정합니다.
+              sx={{ backgroundColor: 'white' }} 
               title={card.title}
               value={card.value}
               interval={card.interval}
@@ -136,21 +138,25 @@ export default function CrmMainDashboard() {
       {/* Charts row */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
         <Grid item xs={12} md={8}>
-          <CrmSalesChart />
+          {/* 💡 CrmSalesChart에도 흰색 배경을 강제 지정합니다. */}
+          <CrmSalesChart sx={{ backgroundColor: 'white' }} />
         </Grid>
         <Grid item xs={12} md={4}>
-          <CrmLeadsBySourceChart />
+          {/* 💡 CrmLeadsBySourceChart에도 흰색 배경을 강제 지정합니다. */}
+          <CrmLeadsBySourceChart sx={{ backgroundColor: 'white' }} />
         </Grid>
       </Grid>
 
       {/* Tables & Other content */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
         <Grid item xs={12} lg={8}>
-          <CrmRecentDealsTable />
+          {/* 💡 CrmRecentDealsTable에도 흰색 배경을 강제 지정합니다. */}
+          <CrmRecentDealsTable sx={{ backgroundColor: 'white' }} />
         </Grid>
         <Grid item xs={12} lg={4}>
           <Stack spacing={2}>
-            <CrmUpcomingTasks />
+            {/* 💡 CrmUpcomingTasks에도 흰색 배경을 강제 지정합니다. */}
+            <CrmUpcomingTasks sx={{ backgroundColor: 'white' }} />
           </Stack>
         </Grid>
       </Grid>

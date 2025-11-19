@@ -22,7 +22,7 @@ export const datePickersCustomizations: PickersProComponents<Theme> &
           borderRadius: 6,
           margin: "0 6px",
         },
-        ...theme.applyStyles("dark", {
+        ...theme.applyStyles("light", {
           background: gray[900],
           boxShadow:
             "hsla(220, 30%, 5%, 0.7) 0px 4px 16px 0px, hsla(220, 25%, 10%, 0.8) 0px 8px 16px -5px",
@@ -70,7 +70,7 @@ export const datePickersCustomizations: PickersProComponents<Theme> &
           backgroundColor: "transparent",
           [`&.${yearCalendarClasses.selected}`]: { backgroundColor: gray[700] },
         },
-        ...theme.applyStyles("dark", {
+        ...theme.applyStyles("light", {
           color: (theme.vars || theme).palette.grey[300],
           "&:hover": {
             backgroundColor: (theme.vars || theme).palette.action.hover,
@@ -113,7 +113,7 @@ export const datePickersCustomizations: PickersProComponents<Theme> &
           backgroundColor: "transparent",
           [`&.${yearCalendarClasses.selected}`]: { backgroundColor: gray[700] },
         },
-        ...theme.applyStyles("dark", {
+        ...theme.applyStyles("light", {
           color: (theme.vars || theme).palette.grey[300],
           "&:hover": {
             backgroundColor: (theme.vars || theme).palette.action.hover,
@@ -155,7 +155,7 @@ export const datePickersCustomizations: PickersProComponents<Theme> &
           backgroundColor: "transparent",
           [`&.${pickersDayClasses.selected}`]: { backgroundColor: gray[700] },
         },
-        ...theme.applyStyles("dark", {
+        ...theme.applyStyles("light", {
           color: (theme.vars || theme).palette.grey[300],
           "&:hover": {
             backgroundColor: (theme.vars || theme).palette.action.hover,

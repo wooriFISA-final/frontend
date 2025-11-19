@@ -89,7 +89,7 @@ export const dataGridCustomizations: DataGridProComponents<Theme> &
           "&:active": {
             backgroundColor: gray[200],
           },
-          ...theme.applyStyles("dark", {
+          ...theme.applyStyles("light", {
             color: gray[50],
             "&:hover": {
               backgroundColor: gray[800],
@@ -109,7 +109,7 @@ export const dataGridCustomizations: DataGridProComponents<Theme> &
         "&:active": {
           backgroundColor: gray[200],
         },
-        ...theme.applyStyles("dark", {
+        ...theme.applyStyles("light", {
           color: gray[50],
           "&:hover": {
             backgroundColor: gray[800],
