@@ -61,7 +61,7 @@ const suggestedPrompts = [
 ];
 
 // 백엔드 API URL
-const API_BASE_URL = "http://localhost:8000";
+const API_BASE_URL = "http://localhost:8080";
 
 export default function Plan() {
   const [messages, setMessages] = React.useState<Message[]>(initialMessages);
