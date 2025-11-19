@@ -16,15 +16,6 @@ interface AppThemeProps {
    */
   disableCustomTheme?: boolean;
   themeComponents?: ThemeOptions["components"];
-}
-
-export default function AppTheme(props: AppThemeProps) {
-  const { children, disableCustomTheme, themeComponents } = props;
-  const theme = React.useMemo(() => {
-    return disableCustomTheme
-      ? {}
-      : createTheme({
-          // For more details about CSS variables configuration, see https://mui.com/material-ui/customization/css-theme-variables/configuration/
 
   // 💡 CrmDashboard에서 현재 테마 모드를 받을 수 있도록 합니다.
   mode?: 'light' | 'dark';
@@ -46,8 +37,6 @@ export default function AppTheme(props: AppThemeProps) {
             colorSchemeSelector: "data-mui-color-scheme",
             cssVarPrefix: "template",
           },
-          defaultColorScheme: "light", // Set light mode as default instead of using system preference
-          colorSchemes, // Recently added in v6 for building light & dark mode app, see https://mui.com/material-ui/customization/palette/#color-schemes
           // defaultColorScheme: "light" (이 설정만으로는 부족하여 아래 palette를 직접 설정합니다.)
           
           // 💡 colorSchemes 대신, 선택된 모드의 팔레트만 적용하여 위젯이 해당 모드의 색상을 사용하도록 강제합니다.
@@ -68,7 +57,6 @@ export default function AppTheme(props: AppThemeProps) {
             ...themeComponents,
           },
         });
-  }, [disableCustomTheme, themeComponents]);
   }, [disableCustomTheme, themeComponents, mode]); // 💡 mode가 바뀔 때마다 테마가 재생성되도록 의존성 배열에 추가
 
   if (disableCustomTheme) {
@@ -79,5 +67,4 @@ export default function AppTheme(props: AppThemeProps) {
       {children}
     </ThemeProvider>
   );
-}
 }
