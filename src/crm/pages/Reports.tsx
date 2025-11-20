@@ -5,338 +5,388 @@ import Grid from "@mui/material/Grid";
 import Stack from "@mui/material/Stack";
 import Button from "@mui/material/Button";
 import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
-import Card from "@mui/material/Card"; 
-import CardContent from "@mui/material/CardContent"; 
-import IconButton from "@mui/material/IconButton"; 
-import VisibilityIcon from "@mui/icons-material/Visibility"; 
-import ArrowBackIcon from "@mui/icons-material/ArrowBack"; 
-import axios from 'axios'; 
+import Card from "@mui/material/Card";
+import CardContent from "@mui/material/CardContent";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import axios from "axios";
+
+import {
+  PieChart,
+  Pie,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  Cell,
+} from "recharts";
 
 // ----------------------------------------------------
-// 🚨 1. API 설정 및 인터페이스 정의
+// 1. API 설정 + 타입 정의
 // ----------------------------------------------------
-const API_URL = 'http://127.0.0.1:8001/api/v1/generate-report'; 
 
-// 💡 1. AgentResult 상세 구조 정의 (main_orchestrator의 final_json_data 구조)
-interface ConsumptionResult {
-    pie_chart_data: any;
-    category_analysis: string;
-    nickname_and_cluster: string;
-    fixed_variable_detail: string;
+// FastAPI reports 엔드포인트
+const API_URL = "http://127.0.0.1:8000/reports";
+
+interface SpendByCategory {
+  category: string;
+  amount: number;
 }
 
-interface ProfitResult {
-    time_series_data: any;
-    month_over_month_analysis: string;
-    insights_advice: string;
-    total_net_profit_loss: number;
+interface SpendChartJson {
+  period: string;
+  total_spend: number;
+  by_category: SpendByCategory[];
 }
 
-interface CompareResult {
-    policy_change_analysis: string;
-    user_index_change: string;
-    real_estate_trend: string;
+// FastAPI의 ReportRead 스키마와 맞춘 타입
+interface ReportDto {
+  report_id: number;
+  user_id: number;
+  created_at: string;
+  summarize: string | null;
+  spend_chart_json: SpendChartJson | null;
+  spend_analysis_text: string | null;
+  policy_changes: string | null;
+  summary_3lines: string | null;
+  user_info_changes: string | null;
 }
-
-interface ReportDataPayload {
-    consume: ConsumptionResult;
-    profit: ProfitResult;
-    compare: CompareResult;
-    metadata: { member_id: number; generated_at: string; };
-    full_report_string?: string; // 전체 텍스트도 포함 가능
-}
-
-// 💡 2. FastAPI 최종 응답 인터페이스
-interface AgentResponse {
-  status: 'success' | 'error';
-  report_data?: ReportDataPayload; // ⬅️ 구조화된 JSON 객체를 받습니다.
-  summary?: string; 
-  detail?: string; 
-}
-
 
 // ----------------------------------------------------
-// 🚨 2. 가상의 리포트 데이터 정의
-// ----------------------------------------------------
-const reportDates = [
-  { id: 1, month: "2025년 3월", date: "2025-03-31", status: "Completed" },
-  { id: 2, month: "2025년 2월", date: "2025-02-28", status: "Completed" },
-  { id: 3, month: "2025년 1월", date: "2025-01-31", status: "Completed" }, // API 호출 대상
-];
-
-// ----------------------------------------------------
-// 🚨 3. 리포트 카드 컴포넌트 (유지)
+// 2. 리포트 카드 컴포넌트 (목록용)
 // ----------------------------------------------------
 interface ReportCardProps {
-  report: typeof reportDates[0];
-  onView: (id: number) => void;
+  report: ReportDto;
+  onView: (report: ReportDto) => void;
 }
 
 const ReportCard: React.FC<ReportCardProps> = ({ report, onView }) => {
+  const createdDate = new Date(report.created_at);
+
   return (
-    <Grid item xs={12} sm={6} md={4} lg={3}>
-      <Card
-        elevation={1} 
-        sx={{
-          p: 1.5,
-          borderRadius: 2,
-          transition: "box-shadow 0.3s",
-          backgroundColor: '#FFFFFF !important', 
-          "&:hover": {
-            boxShadow: "0 6px 12px rgba(0, 0, 0, 0.15)",
-            cursor: "pointer",
-          },
-        }}
-        onClick={() => onView(report.id)} 
-      >
-        <CardContent sx={{ p: 1, "&:last-child": { pb: 1 } }}>
-          <Stack direction="column" spacing={1.5}>
-            <Typography variant="subtitle1" fontWeight={700} color="#0074E9">
-              {report.month} 통합 리포트
+    <Card
+      elevation={1}
+      sx={{
+        p: 1.5,
+        borderRadius: 2,
+        transition: "box-shadow 0.3s, transform 0.2s",
+        backgroundColor: "#FFFFFF !important",
+        "&:hover": {
+          boxShadow: "0 6px 12px rgba(0, 0, 0, 0.15)",
+          transform: "translateY(-2px)",
+          cursor: "pointer",
+        },
+      }}
+      onClick={() => onView(report)}
+    >
+      <CardContent sx={{ p: 1.5, "&:last-child": { pb: 1.5 } }}>
+        <Stack direction="column" spacing={1.5}>
+          <Typography
+            variant="subtitle1"
+            fontWeight={700}
+            color="#0074E9"
+            sx={{ textDecoration: "underline" }}
+          >
+            {createdDate.getFullYear()}년 {createdDate.getMonth() + 1}월 통합 리포트
+          </Typography>
+
+          <Typography variant="body2" color="text.secondary">
+            생성일: {createdDate.toLocaleString()}
+          </Typography>
+
+          {report.summary_3lines && (
+            <Typography
+              variant="body2"
+              color="text.primary"
+              sx={{ mt: 0.5, lineHeight: 1.6 }}
+            >
+              {report.summary_3lines}
             </Typography>
-            <Typography variant="body2" color="text.secondary">
-              생성일: {report.date}
-            </Typography>
-            
-            <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ pt: 1 }}>
-            </Stack>
-          </Stack>
-        </CardContent>
-      </Card>
-    </Grid>
+          )}
+        </Stack>
+      </CardContent>
+    </Card>
   );
 };
 
-
 // ----------------------------------------------------
-// 🚨 4. 리포트 상세 뷰 컴포넌트 (API 호출 및 구조화된 데이터 처리)
+// 3. 공통 블록 컴포넌트
 // ----------------------------------------------------
-interface ReportDetailViewProps {
-    report: typeof reportDates[0];
-    onBack: () => void;
-}
-
-const ReportDetailView: React.FC<ReportDetailViewProps> = ({ report, onBack }) => {
-    // 🚨 [수정] reportText 대신 구조화된 데이터를 담을 상태 추가
-    const [reportData, setReportData] = React.useState<ReportDataPayload | null>(null);
-    const [loading, setLoading] = React.useState(true); 
-    const [error, setError] = React.useState<string | null>(null);
-
-    // 💡 더미 데이터 로직 (API 호출 없는 2월/3월 리포트용)
-    const getDummyReport = (month: string): ReportDataPayload => ({
-        consume: { 
-            pie_chart_data: [], 
-            category_analysis: `(더미) ${month}의 식비 지출이 크게 증가했습니다.`, 
-            nickname_and_cluster: `핵심 소비 세대 (더미)`,
-            fixed_variable_detail: `고정비 비중 30%, 변동비 비중 70%로 분석됨.`,
-        },
-        profit: { 
-            time_series_data: [], 
-            month_over_month_analysis: "전월 대비 주요 변동 없음.", 
-            insights_advice: "안정적인 저축 전략 유지 권고.",
-            total_net_profit_loss: 500000,
-        },
-        compare: {
-            policy_change_analysis: "정책 변동 사항 없음 (더미).",
-            user_index_change: "DSR/LTV 변동 없음.",
-            real_estate_trend: "서울 송파구 주택 가격 안정세 (더미).",
-        },
-        metadata: { member_id: 1004, generated_at: new Date().toISOString() }
-    });
-
-
-    // 💡 [핵심] API 호출 및 데이터 가져오기 로직
-    React.useEffect(() => {
-        // ID 1, 2인 경우 (더미 리포트)
-        if (report.id !== 3) {
-            setReportData(getDummyReport(report.month));
-            setLoading(false);
-            return;
-        }
-
-        // ID 3인 경우 (API 호출)
-        const fetchReport = async () => {
-            setLoading(true);
-            setError(null);
-            try {
-                // 🚨 FastAPI에 POST 요청
-                const response = await axios.post<AgentResponse>(
-                    API_URL, 
-                    { member_id: 1004, user_id: 500 }, 
-                    { timeout: 800000 } 
-                );
-                
-                // 🚨 [핵심 수정] report_data 필드에 구조화된 JSON이 있는지 확인
-                if (response.data.status === 'success' && response.data.report_data) {
-                    // JSON 객체 전체를 상태에 저장
-                    setReportData(response.data.report_data); 
-                } else {
-                    const errMsg = response.data.detail || 'FastAPI에서 유효한 리포트 필드를 받지 못했습니다.';
-                    setError(errMsg);
-                }
-            } catch (err: any) {
-                const msg = err.code === 'ECONNABORTED' ? '요청 시간 초과' : '서버 통신 실패';
-                setError(`🚨 ${msg}`);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchReport();
-    }, [report.id]); 
-
-    // 💡 개별 분석 블록 컴포넌트 정의 (UI 가독성 향상)
-    const AnalysisBlock: React.FC<{ title: string, content: string | number | React.ReactNode }> = ({ title, content }) => (
-        <Box sx={{ 
-            p: 3, 
-            border: '1px solid #eee', 
-            borderRadius: 1, 
-            backgroundColor: '#fff',
-            minHeight: 100, 
-        }}>
-            <Typography variant="h6" fontWeight={600} mb={1} sx={{ color: '#444' }}>
-                {title}
-            </Typography>
-            {typeof content === 'string' || typeof content === 'number' ? (
-                <Typography variant="body1" sx={{ color: 'black', lineHeight: 1.8 }}>
-                    {content}
-                </Typography>
-            ) : (
-                content
-            )}
-        </Box>
-    );
-
-    // ----------------------------------------------------
-    // 🚨 렌더링 시작
-    // ----------------------------------------------------
-
-    return (
-        <Box sx={{ p: 4, backgroundColor: '#FFFFFF !important' }}>
-            {/* 뒤로가기 버튼 */}
-            <Button 
-                onClick={onBack} 
-                startIcon={<ArrowBackIcon />}
-                sx={{ mb: 3, textTransform: 'none', fontWeight: 600, backgroundColor: '#0074E9', color: 'white', '&:hover': { backgroundColor: '#3399FF' } }}
-            >
-                리포트 목록으로 돌아가기
-            </Button>
-            
-            <Typography variant="h5" mb={3} fontWeight={600} color="#222222">
-                {report.month} 상세 통합 분석 보고서
-            </Typography>
-            
-            {/* 로딩/오류 메시지 */}
-            {(loading || error) && (
-                <Box sx={{ p: 3, border: '1px solid #ddd', borderRadius: 2, backgroundColor: '#f9f9f9' }}>
-                    {loading && <Typography sx={{ color: 'black' }}>분석 에이전트 실행 중... (LLM 분석 대기 중)</Typography>}
-                    {error && <Typography color="error">🚨 {error}</Typography>}
-                </Box>
-            )}
-
-            {/* 🚨 [핵심] 리포트 내용 표시 (구조화된 데이터 사용) */}
-            {!loading && !error && reportData && (
-                <Grid container spacing={3}>
-                    
-                    {/* 1. 상단 요약 (순수익/별명) */}
-                    <Grid item xs={12}>
-                        <Stack direction="row" spacing={3} sx={{ p: 2, backgroundColor: '#E3F2FD', borderRadius: 2 }}>
-                            <Typography variant="subtitle1" fontWeight={700} sx={{ color: 'black' }}>
-                                순수익/손실: {reportData.profit.total_net_profit_loss.toLocaleString()} 원
-                            </Typography>
-                            <Typography variant="subtitle1" fontWeight={700} sx={{ color: '#0074E9' }}>
-                                군집 유형: {reportData.consume.nickname_and_cluster}
-                            </Typography>
-                        </Stack>
-                    </Grid>
-
-                    {/* 2. 소비 분석 및 투자 분석 */}
-                    <Grid item xs={12} md={6}>
-                        <AnalysisBlock title="소비 분석 (군집 및 상세 내역)" content={
-                            <Stack spacing={1.5}>
-                                <Typography variant="body1" fontWeight={600} sx={{ color: '#0074E9' }}>{reportData.consume.nickname_and_cluster}</Typography>
-                                <Typography variant="body2">{reportData.consume.category_analysis}</Typography>
-                                <Typography variant="caption" sx={{ mt: 1 }}>{reportData.consume.fixed_variable_detail}</Typography>
-                            </Stack>
-                        } />
-                    </Grid>
-                    <Grid item xs={12} md={6}>
-                        <AnalysisBlock title="투자 분석 (인사이트 및 방향성)" content={
-                            <Typography variant="body2">{reportData.profit.insights_advice}</Typography>
-                        } />
-                    </Grid>
-
-                    {/* 3. 환경 변화 분석 */}
-                    <Grid item xs={12}>
-                        <AnalysisBlock title="정책 및 환경 변동 사항" content={
-                            <Stack spacing={1}>
-                                <Typography variant="body2">
-                                    **정책 변동:** {reportData.compare.policy_change_analysis}
-                                </Typography>
-                                <Typography variant="body2">
-                                    **개인 지수 변동:** {reportData.compare.user_index_change}
-                                </Typography>
-                                <Typography variant="body2">
-                                    **부동산 트렌드:** {reportData.compare.real_estate_trend}
-                                </Typography>
-                            </Stack>
-                        } />
-                    </Grid>
-                    
-                    {/* 4. 전체 보고서 String (디버깅 또는 전체 텍스트용) */}
-                    <Grid item xs={12}>
-                        <AnalysisBlock 
-                            title="전체 통합 보고서 텍스트 (Raw Data)" 
-                            content={
-                                <Typography variant="body2" sx={{ color: 'gray', whiteSpace: 'pre-wrap' }}>
-                                    {reportData.full_report_string || '전체 원본 텍스트 필드 누락'}
-                                </Typography>
-                            }
-                        />
-                    </Grid>
-
-                </Grid>
-            )}
-        </Box>
-    );
-};
-
-
-// ----------------------------------------------------
-// 5. 메인 Reports 컴포넌트 및 ReportCard (유지)
-// ----------------------------------------------------
-export default function Reports() {
-  // ... (Reports 컴포넌트 JSX 및 로직 유지) ...
-  const [selectedReportId, setSelectedReportId] = React.useState<number | null>(null);
-
-  const handleViewReport = (id: number) => {
-    setSelectedReportId(id);
-  };
-
-  const report = reportDates.find(r => r.id === selectedReportId);
-
-  if (selectedReportId !== null && report) {
-      return <ReportDetailView report={report} onBack={() => setSelectedReportId(null)} />;
-  }
-
+const AnalysisBlock: React.FC<{
+  title: string;
+  content: string | React.ReactNode | null;
+}> = ({ title, content }) => {
+  if (!content) return null;
 
   return (
-    <Box 
-      sx={{ 
-        width: "100%", 
-        maxWidth: { sm: "100%", md: "1700px" },
-        backgroundColor: '#FFFFFF !important'
+    <Box
+      sx={{
+        p: 3,
+        border: "1px solid #eee",
+        borderRadius: 1,
+        backgroundColor: "#fff",
+        minHeight: 80,
       }}
     >
-      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 4, p: 2 }}>
-        <Typography variant="h4" component="h1" sx={{ color: "#222222", fontWeight: 600 }}>
+      <Typography variant="h6" fontWeight={600} mb={1} sx={{ color: "#444" }}>
+        {title}
+      </Typography>
+      {typeof content === "string" ? (
+        <Typography
+          variant="body1"
+          sx={{ color: "black", lineHeight: 1.8, whiteSpace: "pre-wrap" }}
+        >
+          {content}
+        </Typography>
+      ) : (
+        content
+      )}
+    </Box>
+  );
+};
+
+// ----------------------------------------------------
+// 4. 소비 파이 차트 컴포넌트 (크게 조정)
+// ----------------------------------------------------
+const SpendPieChart: React.FC<{ data: SpendChartJson }> = ({ data }) => {
+  const chartData = data.by_category.map((item) => ({
+    name: item.category,
+    value: item.amount,
+  }));
+
+  const COLORS = ["#0074E9", "#00C49F", "#FFBB28", "#FF8042", "#8884D8"];
+
+  return (
+    <Box sx={{ width: "100%", height: 480 }}> {/* ⬅️ 높이 키움 */}
+      <ResponsiveContainer>
+        <PieChart>
+          <Pie
+            data={chartData}
+            dataKey="value"
+            nameKey="name"
+            cx="50%"
+            cy="50%"
+            outerRadius={125} // ⬅️ 반지름 키워서 더 크게
+            label
+          >
+            {chartData.map((entry, index) => (
+              <Cell
+                key={`cell-${index}`}
+                fill={COLORS[index % COLORS.length]}
+              />
+            ))}
+          </Pie>
+          <Tooltip
+            formatter={(value: any) =>
+              `${Number(value).toLocaleString()} 원`
+            }
+          />
+          <Legend />
+        </PieChart>
+      </ResponsiveContainer>
+    </Box>
+  );
+};
+
+// ----------------------------------------------------
+// 5. 리포트 상세 뷰
+// ----------------------------------------------------
+interface ReportDetailViewProps {
+  report: ReportDto;
+  onBack: () => void;
+}
+
+const ReportDetailView: React.FC<ReportDetailViewProps> = ({
+  report,
+  onBack,
+}) => {
+  const createdDate = new Date(report.created_at);
+  const hasChart = !!report.spend_chart_json;
+
+  return (
+    <Box
+      sx={{
+        width: "100%",
+        maxWidth: { sm: "100%", md: "1700px" }, // ⬅️ 전체 폭 넓게
+        mx: "auto",
+        px: { xs: 2, md: 3 },                    // 좌우 여백 살짝만
+        py: { xs: 3, md: 4 },
+        backgroundColor: "#FFFFFF !important",
+      }}
+    >
+      {/* 뒤로가기 버튼 */}
+      <Button
+        onClick={onBack}
+        startIcon={<ArrowBackIcon />}
+        sx={{
+          mb: 3,
+          textTransform: "none",
+          fontWeight: 600,
+          backgroundColor: "#0074E9",
+          color: "white",
+          "&:hover": { backgroundColor: "#3399FF" },
+        }}
+      >
+        리포트 목록으로 돌아가기
+      </Button>
+
+      {/* 상단 제목/메타 */}
+      <Typography variant="h5" mb={1} fontWeight={600} color="#222222">
+        {createdDate.getFullYear()}년 {createdDate.getMonth() + 1}월 상세 통합 분석 보고서
+      </Typography>
+      <Typography variant="body2" mb={3} color="text.secondary">
+        생성일: {createdDate.toLocaleString()} · 회원 ID: {report.user_id}
+      </Typography>
+
+      {/* ================= 상단 영역 ================= */}
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: {
+            xs: "1fr",
+            md: hasChart ? "3fr 3fr 6fr" : "1fr",
+            lg: hasChart ? "4fr 4fr 7fr" : "1fr",
+          },
+          gridAutoRows: "minmax(0, auto)",
+          columnGap: 3,
+          rowGap: 3,
+          mb: 4,
+          alignItems: "stretch",
+        }}
+      >
+        {hasChart && report.spend_chart_json && (
+          <>
+            {/* 파이 차트 */}
+            <Box sx={{ gridColumn: { xs: "1", md: "1" }, gridRow: "1" }}>
+              <AnalysisBlock
+                title="소비 그래프 (파이 차트)"
+                content={<SpendPieChart data={report.spend_chart_json} />}
+              />
+            </Box>
+
+            {/* JSON 데이터 */}
+            <Box sx={{ gridColumn: { xs: "1", md: "2" }, gridRow: "1" }}>
+              <AnalysisBlock
+                title="소비 그래프 데이터 (JSON)"
+                content={
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      color: "gray",
+                      whiteSpace: "pre-wrap",
+                      fontFamily: "monospace",
+                    }}
+                  >
+                    {JSON.stringify(report.spend_chart_json, null, 2)}
+                  </Typography>
+                }
+              />
+            </Box>
+          </>
+        )}
+
+        {/* 소비 분석: 오른쪽에서 파이+JSON 합친 높이만큼 차지 */}
+        <Box
+          sx={{
+            gridColumn: {
+              xs: "1",
+              md: hasChart ? "3" : "1",
+            },
+            gridRow: hasChart ? "1 / span 2" : "1",
+            height: "100%",
+          }}
+        >
+          <AnalysisBlock title="소비 분석" content={report.spend_analysis_text} />
+        </Box>
+      </Box>
+
+      {/* ================= 하단 영역 ================= */}
+      <Stack spacing={3}>
+        <AnalysisBlock
+          title="사용자 정보 변화"
+          content={report.user_info_changes}
+        />
+        <AnalysisBlock
+          title="정책 및 환경 변동 사항"
+          content={report.policy_changes}
+        />
+        <AnalysisBlock title="3줄 요약" content={report.summary_3lines} />
+        <AnalysisBlock
+          title="전체 통합 보고서 (summarize)"
+          content={report.summarize}
+        />
+      </Stack>
+    </Box>
+  );
+};
+
+// ----------------------------------------------------
+// 6. 메인 Reports 컴포넌트 (목록 화면)
+// ----------------------------------------------------
+export default function Reports() {
+  const [reports, setReports] = React.useState<ReportDto[]>([]);
+  const [selectedReport, setSelectedReport] =
+    React.useState<ReportDto | null>(null);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    const fetchReports = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await axios.get<ReportDto[]>(API_URL, { timeout: 15000 });
+        setReports(res.data);
+      } catch (err: any) {
+        console.error(err);
+        setError("리포트 목록을 불러오는 중 오류가 발생했습니다.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchReports();
+  }, []);
+
+  const handleViewReport = (report: ReportDto) => {
+    setSelectedReport(report);
+  };
+
+  const handleBack = () => {
+    setSelectedReport(null);
+  };
+
+  // 상세 보기 모드
+  if (selectedReport) {
+    return <ReportDetailView report={selectedReport} onBack={handleBack} />;
+  }
+
+  // 목록 보기 모드
+  return (
+    <Box
+      sx={{
+        width: "100%",
+        maxWidth: { sm: "100%", md: "1700px" },
+        mx: "auto",
+        backgroundColor: "#FFFFFF !important",
+      }}
+    >
+      <Stack
+        direction="row"
+        justifyContent="space-between"
+        alignItems="center"
+        sx={{ mb: 4, p: 2 }}
+      >
+        <Typography
+          variant="h4"
+          component="h1"
+          sx={{ color: "#222222", fontWeight: 600 }}
+        >
           Reports Overview
         </Typography>
         <Button
           startIcon={<DownloadRoundedIcon />}
           sx={{
             backgroundColor: "#0074E9",
-            color: 'white',
+            color: "white",
             textTransform: "none",
             fontWeight: 500,
             borderRadius: 2,
@@ -354,11 +404,47 @@ export default function Reports() {
         </Button>
       </Stack>
 
-      <Grid container spacing={4} sx={{ mb: 4, p: 2 }}>
-        {reportDates.map((report) => (
-          <ReportCard key={report.id} report={report} onView={handleViewReport} />
-        ))}
-      </Grid>
+      {loading && (
+        <Box sx={{ p: 3 }}>
+          <Typography>리포트 목록을 불러오는 중입니다...</Typography>
+        </Box>
+      )}
+
+      {error && (
+        <Box sx={{ p: 3 }}>
+          <Typography color="error">{error}</Typography>
+        </Box>
+      )}
+
+      {!loading && !error && (
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateColumns: {
+              xs: "repeat(1, minmax(0, 1fr))",
+              sm: "repeat(2, minmax(0, 1fr))",
+              md: "repeat(3, minmax(0, 1fr))",
+              lg: "repeat(5, minmax(0, 1fr))",
+            },
+            gap: 3,
+            mb: 4,
+            p: 2,
+          }}
+        >
+          {reports.length === 0 && (
+            <Typography sx={{ p: 2 }}>
+              아직 생성된 리포트가 없습니다.
+            </Typography>
+          )}
+          {reports.map((report) => (
+            <ReportCard
+              key={report.report_id}
+              report={report}
+              onView={handleViewReport}
+            />
+          ))}
+        </Box>
+      )}
     </Box>
   );
 }
