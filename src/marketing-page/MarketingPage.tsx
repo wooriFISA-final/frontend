@@ -1,38 +1,39 @@
-import * as React from "react";
-import CssBaseline from "@mui/material/CssBaseline";
-import Divider from "@mui/material/Divider";
-import AppTheme from "../shared-theme/AppTheme";
-import AppAppBar from "./components/AppAppBar";
-import Hero from "./components/Hero";
-import LogoCollection from "./components/LogoCollection";
-import Highlights from "./components/Highlights";
-import Pricing from "./components/Pricing";
-import Features from "./components/Features";
-import Testimonials from "./components/Testimonials";
-import FAQ from "./components/FAQ";
-import Footer from "./components/Footer";
+// src/marketing-page/MarketingPage.tsx
+import React from "react";
+import { useAuth } from "../auth/useAuth";
+import { useNavigate } from "react-router-dom";
+import { Box, Button, Typography } from "@mui/material";
 
-export default function MarketingPage(props: { disableCustomTheme?: boolean }) {
+export default function MarketingPage() {
+  const { login } = useAuth();
+  const navigate = useNavigate();
+
   return (
-    <AppTheme {...props}>
-      <CssBaseline enableColorScheme />
-
-      <AppAppBar />
-      <Hero />
-      <div>
-        <LogoCollection />
-        <Features />
-        <Divider />
-        <Testimonials />
-        <Divider />
-        <Highlights />
-        <Divider />
-        <Pricing />
-        <Divider />
-        <FAQ />
-        <Divider />
-        <Footer />
-      </div>
-    </AppTheme>
+    <Box
+      sx={{
+        height: "100vh",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        textAlign: "center",
+        backgroundColor: "#F5F7FA",
+      }}
+    >
+      <Typography variant="h3" sx={{ mb: 2, fontWeight: 600 }}>
+        Welcome to WOORI-ZIP
+      </Typography>
+      <Typography variant="body1" sx={{ mb: 4, color: "gray" }}>
+        고객 관리를 더 효율적으로! 지금 바로 시작해보세요.
+      </Typography>
+      <Button
+        variant="contained"
+        size="large"
+        sx={{ px: 5, py: 1.5, borderRadius: 3 }}
+        onClick={() => navigate("/auth")} // ✅ auth 페이지로 이동
+      >
+        회원가입 / 로그인 하기
+      </Button>
+    </Box>
   );
 }
