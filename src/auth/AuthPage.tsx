@@ -52,7 +52,7 @@ export default function AuthPage() {
       // ✅ 토큰 저장
       localStorage.setItem("access_token", data.access_token);
 
-      login(); // AuthContext 상태 갱신
+      login(data.access_token); // AuthContext 상태 갱신
       navigate("/dashboard");
 
     } catch (err) {

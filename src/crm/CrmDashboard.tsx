@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Outlet, Routes, Route, useLocation } from "react-router-dom";
+import { Outlet, Routes, Route, useLocation, Navigate } from "react-router-dom";
 import type {} from "@mui/x-date-pickers/themeAugmentation";
 import type {} from "@mui/x-charts/themeAugmentation";
 import type {} from "@mui/x-data-grid-pro/themeAugmentation";
@@ -62,9 +62,11 @@ export default function CrmDashboard() {
               <CrmHeader />
             </Stack>
           )}
+
           <Routes>
+            {/* ✅ 이제 /home 이 기존 대시보드(Home) 화면 */}
             <Route
-              index
+              path="/home"
               element={
                 <Stack
                   spacing={2}
@@ -79,8 +81,12 @@ export default function CrmDashboard() {
                 </Stack>
               }
             />
+
+            {/* ✅ 예전 주소 /dashboard 로 들어오면 /home 으로 리다이렉트 */}
+            <Route path="/dashboard" element={<Navigate to="/home" replace />} />
+
             <Route
-              path="reports"
+              path="/reports"
               element={
                 <Stack
                   spacing={2}
@@ -95,9 +101,11 @@ export default function CrmDashboard() {
                 </Stack>
               }
             />
-            <Route path="plan" element={<Plan />} />
+
+            <Route path="/plan" element={<Plan />} />
+
             <Route
-              path="settings"
+              path="/settings"
               element={
                 <Stack
                   spacing={2}
@@ -113,7 +121,6 @@ export default function CrmDashboard() {
               }
             />
           </Routes>
-          <Outlet />
         </Box>
       </Box>
     </AppTheme>

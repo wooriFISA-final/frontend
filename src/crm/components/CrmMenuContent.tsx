@@ -16,7 +16,7 @@ import SettingsRoundedIcon from "@mui/icons-material/SettingsRounded";
 import HelpOutlineRoundedIcon from "@mui/icons-material/HelpOutlineRounded";
 
 const mainListItems = [
-  { text: "Home", icon: <HomeRoundedIcon />, path: "/" },
+  { text: "Home", icon: <HomeRoundedIcon />, path: "/dashboard" },
   { text: "Plan", icon: <SmartToyRoundedIcon />, path: "/plan" },
   { text: "Reports", icon: <AssessmentRoundedIcon />, path: "/reports" },
 ];

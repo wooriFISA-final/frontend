@@ -1,6 +1,6 @@
+// src/crm/components/CrmSideMenu.tsx
 import * as React from "react";
 import { styled } from "@mui/material/styles";
-import { useNavigate, useLocation } from "react-router-dom";
 import Avatar from "@mui/material/Avatar";
 import MuiDrawer, { drawerClasses } from "@mui/material/Drawer";
 import Box from "@mui/material/Box";
@@ -10,6 +10,7 @@ import Typography from "@mui/material/Typography";
 import ChevronLeftRoundedIcon from "@mui/icons-material/ChevronLeftRounded";
 import CrmMenuContent from "./CrmMenuContent";
 import CrmOptionsMenu from "./CrmOptionsMenu";
+import { useAuth } from "../../auth/AuthContext";
 
 const drawerWidthExpanded = 240;
 const drawerWidthCollapsed = 80;
@@ -32,10 +33,26 @@ const Drawer = styled(MuiDrawer)(({ theme }) => ({
 }));
 
 export default function CrmSideMenu() {
+  const auth = useAuth();
+  const { isLoggedIn, userName } = auth;
+
   const [isCollapsed, setIsCollapsed] = React.useState(false);
 
+  // 디버깅용
+  console.log("CrmSideMenu auth:", auth);
+
+  // userName 기반 이니셜
+  const initials = React.useMemo(() => {
+    if (userName) {
+      const trimmed = userName.trim();
+      if (trimmed.length <= 2) return trimmed.toUpperCase();
+      return trimmed.slice(-2).toUpperCase();
+    }
+    return "U";
+  }, [userName]);
+
   const toggleSidebar = () => {
-    setIsCollapsed(!isCollapsed);
+    setIsCollapsed((prev) => !prev);
   };
 
   return (
@@ -58,7 +75,7 @@ export default function CrmSideMenu() {
           boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)",
         }}
       >
-        {/* Header with collapse button */}
+        {/* 상단 접기 버튼 */}
         <Box
           sx={{
             display: "flex",
@@ -116,7 +133,7 @@ export default function CrmSideMenu() {
 
         {!isCollapsed && <Divider sx={{ borderColor: "#F0F2F5" }} />}
 
-        {/* Menu content */}
+        {/* 메뉴 영역 */}
         <Box
           sx={{
             overflow: "auto",
@@ -129,7 +146,7 @@ export default function CrmSideMenu() {
           <CrmMenuContent isCollapsed={isCollapsed} />
         </Box>
 
-        {/* User profile footer */}
+        {/* 하단 사용자 정보 */}
         {!isCollapsed && <Divider sx={{ borderColor: "#F0F2F5" }} />}
         <Stack
           direction={isCollapsed ? "column" : "row"}
@@ -143,11 +160,10 @@ export default function CrmSideMenu() {
         >
           <Avatar
             sizes="small"
-            alt="Alex Thompson"
-            src="/static/images/avatar/7.jpg"
+            alt={userName ?? "사용자"}
             sx={{ width: 36, height: 36, bgcolor: "#0074E9", color: "#FFFFFF" }}
           >
-            AT
+            {initials}
           </Avatar>
           {!isCollapsed && (
             <>
@@ -156,10 +172,10 @@ export default function CrmSideMenu() {
                   variant="body2"
                   sx={{ fontWeight: 500, lineHeight: "16px", color: "#222222" }}
                 >
-                  Alex Thompson
+                  {isLoggedIn && userName ? userName : "로그인 사용자"}
                 </Typography>
                 <Typography variant="caption" sx={{ color: "#999999" }}>
-                  alex@acmecrm.com
+                  {/* 필요하면 나중에 email도 AuthContext에서 넘겨서 사용 */}
                 </Typography>
               </Box>
               <CrmOptionsMenu />
