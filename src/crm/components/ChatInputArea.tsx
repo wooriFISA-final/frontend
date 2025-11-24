@@ -31,6 +31,7 @@ export default function ChatInputArea({
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
+    // Enter만 누르면 전송, Shift+Enter는 줄바꿈
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSend();
@@ -46,14 +47,11 @@ export default function ChatInputArea({
   return (
     <Box
       sx={(theme) => ({
-        // Plan 우측 컬럼 안에서만 고정
         position: "sticky",
         bottom: 0,
         left: 0,
         right: 0,
-        // 🔹 위 채팅 박스와 같은 좌우 padding (Plan.tsx의 p: 2 과 맞춤)
         px: 0,
-        // 🔹 채팅 영역과의 간격만 살짝
         pt: 1,
         pb: 2,
         bgcolor: theme.palette.background.default,
@@ -63,8 +61,8 @@ export default function ChatInputArea({
       <Paper
         elevation={0}
         sx={(theme) => ({
-          width: "100%",        // 🔹 상단 채팅 Paper와 같은 폭
-          borderRadius: 2,      // 🔹 위 채팅 Paper(borderRadius: 2)와 통일
+          width: "100%",
+          borderRadius: 2,
           p: 1.5,
           bgcolor: "background.paper",
           boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
@@ -106,7 +104,8 @@ export default function ChatInputArea({
           <TextField
             fullWidth
             multiline
-            maxRows={4}
+            // 🔹 한 줄 높이로 보이게
+            rows={1}
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyPress={handleKeyPress}
@@ -132,10 +131,12 @@ export default function ChatInputArea({
                   borderWidth: 1,
                 },
               },
-              "& .MuiOutlinedInput-input": {
-                // placeholder를 왼쪽 끝 + 수직 가운데 느낌으로
+              // 🔹 실제 textarea 스타일 (안에서만 스크롤)
+              "& textarea": {
                 paddingY: "10px",
                 paddingX: "14px",
+                resize: "none",
+                overflowY: "auto",
               },
             }}
           />

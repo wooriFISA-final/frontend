@@ -27,7 +27,7 @@ import {
 // ----------------------------------------------------
 
 // ⚠️ FastAPI /reports 엔드포인트 주소에 맞게 수정해서 사용하세요.
-const API_URL = "http://localhost:8000/reports/";
+const API_URL = "http://localhost:8080/chat/reports/";
 
 // (선택) 예전처럼 차트용 JSON을 별도 컬럼으로 가지고 있는 경우
 interface SpendByCategory {

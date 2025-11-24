@@ -63,7 +63,7 @@ const suggestedPrompts = [
 ];
 
 // 백엔드 API URL
-const API_BASE_URL = "http://localhost:8080";
+const API_BASE_URL = "http://localhost:8080/chat/plan";
 
 export default function Plan() {
   // ✅ 현재 로그인한 사용자 정보 (AuthContext)
