@@ -35,7 +35,6 @@ const Drawer = styled(MuiDrawer)(({ theme }) => ({
 export default function CrmSideMenu() {
   const auth = useAuth();
   const { isLoggedIn, userName } = auth;
-
   const [isCollapsed, setIsCollapsed] = React.useState(false);
 
   // 디버깅용
@@ -65,15 +64,15 @@ export default function CrmSideMenu() {
       }}
     >
       <Box
-        sx={{
+        sx={(theme) => ({
           width: "100%",
-          backgroundColor: "#FFFFFF",
-          borderRight: "1px solid #F0F2F5",
+          bgcolor: theme.palette.background.paper, // 🔹 사이드바 배경
+          borderRight: `1px solid ${theme.palette.divider}`,
           display: "flex",
           flexDirection: "column",
           height: "100vh",
-          boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)",
-        }}
+          boxShadow: theme.shadows[1],
+        })}
       >
         {/* 상단 접기 버튼 */}
         <Box
@@ -90,18 +89,18 @@ export default function CrmSideMenu() {
             component="button"
             onClick={toggleSidebar}
             type="button"
-            sx={{
+            sx={(theme) => ({
               display: "flex",
               alignItems: "center",
               appearance: "none",
-              backgroundColor: "rgba(255, 255, 255, 1)",
-              borderColor: "rgb(51, 60, 77)",
+              backgroundColor: theme.palette.background.paper,
+              borderColor: theme.palette.divider,
               borderRadius: "8px",
               borderStyle: "solid",
               borderWidth: "1px",
-              color: "rgb(0, 116, 233)",
+              color: theme.palette.primary.main,
               fontSize: "18px",
-              fontWeight: "500",
+              fontWeight: 500,
               height: "36px",
               justifyContent: "center",
               letterSpacing: "normal",
@@ -113,25 +112,25 @@ export default function CrmSideMenu() {
               width: "36px",
               padding: "4px",
               cursor: "pointer",
-            }}
+            })}
           >
             <ChevronLeftRoundedIcon
-              sx={{
+              sx={(theme) => ({
                 fontSize: "16px",
-                fontWeight: "500",
+                fontWeight: 500,
                 height: "16px",
                 width: "16px",
                 lineHeight: "24px",
-                fill: "rgb(0, 116, 233)",
+                fill: theme.palette.primary.main,
                 transitionDuration: "0.3s",
                 transitionProperty: "transform",
                 transform: isCollapsed ? "rotate(180deg)" : "rotate(0deg)",
-              }}
+              })}
             />
           </Box>
         </Box>
 
-        {!isCollapsed && <Divider sx={{ borderColor: "#F0F2F5" }} />}
+        {!isCollapsed && <Divider sx={{ borderColor: "divider" }} />}
 
         {/* 메뉴 영역 */}
         <Box
@@ -147,21 +146,26 @@ export default function CrmSideMenu() {
         </Box>
 
         {/* 하단 사용자 정보 */}
-        {!isCollapsed && <Divider sx={{ borderColor: "#F0F2F5" }} />}
+        {!isCollapsed && <Divider sx={{ borderColor: "divider" }} />}
         <Stack
           direction={isCollapsed ? "column" : "row"}
-          sx={{
+          sx={(theme) => ({
             p: isCollapsed ? 1 : 2,
             gap: 1,
             alignItems: "center",
-            borderTop: "1px solid #F0F2F5",
+            borderTop: `1px solid ${theme.palette.divider}`,
             justifyContent: isCollapsed ? "center" : "flex-start",
-          }}
+          })}
         >
           <Avatar
             sizes="small"
             alt={userName ?? "사용자"}
-            sx={{ width: 36, height: 36, bgcolor: "#0074E9", color: "#FFFFFF" }}
+            sx={(theme) => ({
+              width: 36,
+              height: 36,
+              bgcolor: theme.palette.primary.main,
+              color: theme.palette.getContrastText(theme.palette.primary.main),
+            })}
           >
             {initials}
           </Avatar>
@@ -170,11 +174,15 @@ export default function CrmSideMenu() {
               <Box sx={{ mr: "auto" }}>
                 <Typography
                   variant="body2"
-                  sx={{ fontWeight: 500, lineHeight: "16px", color: "#222222" }}
+                  sx={{
+                    fontWeight: 500,
+                    lineHeight: "16px",
+                    color: "text.primary",
+                  }}
                 >
                   {isLoggedIn && userName ? userName : "로그인 사용자"}
                 </Typography>
-                <Typography variant="caption" sx={{ color: "#999999" }}>
+                <Typography variant="caption" sx={{ color: "text.secondary" }}>
                   {/* 필요하면 나중에 email도 AuthContext에서 넘겨서 사용 */}
                 </Typography>
               </Box>

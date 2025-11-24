@@ -1,3 +1,4 @@
+// src/crm/components/CrmMainDashboard.tsx
 import * as React from "react";
 import Grid from "@mui/material/Grid";
 import Box from "@mui/material/Box";
@@ -70,7 +71,11 @@ export default function CrmMainDashboard() {
         alignItems="center"
         sx={{ mb: 3, display: { xs: "none", sm: "flex" } }}
       >
-        <Typography variant="h5" component="h2" sx={{ color: "#222222", fontWeight: 600 }}>
+        <Typography
+          variant="h5"
+          component="h2"
+          sx={{ color: "text.primary", fontWeight: 600 }} // 🔹 다크/라이트 공통으로 잘 보이게
+        >
           Overview
         </Typography>
         <Box sx={{ display: "flex", gap: 1 }}>
@@ -122,8 +127,8 @@ export default function CrmMainDashboard() {
         {statCardsData.map((card, index) => (
           <Grid key={index} item xs={12} sm={6} lg={3}>
             <CrmStatCard
-              // 💡 배경색을 흰색으로 강제 지정합니다.
-              sx={{ backgroundColor: 'white' }} 
+              // 💡 카드 배경을 흰색으로 고정 (다크 모드에서도 카드가 또렷하게 보이도록)
+              sx={{ backgroundColor: "white" }}
               title={card.title}
               value={card.value}
               interval={card.interval}
@@ -138,25 +143,21 @@ export default function CrmMainDashboard() {
       {/* Charts row */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
         <Grid item xs={12} md={8}>
-          {/* 💡 CrmSalesChart에도 흰색 배경을 강제 지정합니다. */}
-          <CrmSalesChart sx={{ backgroundColor: 'white' }} />
+          <CrmSalesChart sx={{ backgroundColor: "white" }} />
         </Grid>
         <Grid item xs={12} md={4}>
-          {/* 💡 CrmLeadsBySourceChart에도 흰색 배경을 강제 지정합니다. */}
-          <CrmLeadsBySourceChart sx={{ backgroundColor: 'white' }} />
+          <CrmLeadsBySourceChart sx={{ backgroundColor: "white" }} />
         </Grid>
       </Grid>
 
       {/* Tables & Other content */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
         <Grid item xs={12} lg={8}>
-          {/* 💡 CrmRecentDealsTable에도 흰색 배경을 강제 지정합니다. */}
-          <CrmRecentDealsTable sx={{ backgroundColor: 'white' }} />
+          <CrmRecentDealsTable sx={{ backgroundColor: "white" }} />
         </Grid>
         <Grid item xs={12} lg={4}>
           <Stack spacing={2}>
-            {/* 💡 CrmUpcomingTasks에도 흰색 배경을 강제 지정합니다. */}
-            <CrmUpcomingTasks sx={{ backgroundColor: 'white' }} />
+            <CrmUpcomingTasks sx={{ backgroundColor: "white" }} />
           </Stack>
         </Grid>
       </Grid>

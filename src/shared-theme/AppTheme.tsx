@@ -1,13 +1,22 @@
+// src/shared-theme/AppTheme.tsx
 import * as React from "react";
-import { ThemeProvider, createTheme } from "@mui/material/styles";
-import type { ThemeOptions } from "@mui/material/styles";
+import {
+  ThemeProvider,
+  createTheme,
+  type ThemeOptions,
+  type PaletteMode,
+} from "@mui/material/styles";
+import CssBaseline from "@mui/material/CssBaseline";
+
 import { inputsCustomizations } from "./customizations/inputs";
 import { dataDisplayCustomizations } from "./customizations/dataDisplay";
 import { feedbackCustomizations } from "./customizations/feedback";
 import { navigationCustomizations } from "./customizations/navigation";
 import { surfacesCustomizations } from "./customizations/surfaces";
-// 💡 colorSchemes는 light와 dark 두 가지 팔레트를 모두 포함하고 있습니다.
+// 💡 light / dark 팔레트를 모두 포함
 import { colorSchemes, typography, shadows, shape } from "./themePrimitives";
+
+type Mode = Extract<PaletteMode, "light" | "dark">;
 
 interface AppThemeProps {
   children: React.ReactNode;
@@ -17,54 +26,146 @@ interface AppThemeProps {
   disableCustomTheme?: boolean;
   themeComponents?: ThemeOptions["components"];
 
-  // 💡 CrmDashboard에서 현재 테마 모드를 받을 수 있도록 합니다.
-  mode?: 'light' | 'dark';
-
+  // 과거에 CrmDashboard에서 모드를 prop으로 넘기던 용도
+  // 이제는 "초기 모드" 정도로만 사용 (선택 사항)
+  mode?: Mode;
 }
 
-export default function AppTheme(props: AppThemeProps) {
-  // 💡 prop으로 mode를 받고, 기본값을 'light'로 설정하여 라이트 모드를 기본으로 만듭니다.
-  const { children, disableCustomTheme, themeComponents, mode = 'light' } = props;
-  
-  const theme = React.useMemo(() => {
-    // 💡 colorSchemes에서 현재 설정된 mode에 해당하는 팔레트 정보를 선택합니다.
-    const selectedColorScheme = colorSchemes[mode];
+// ================================
+//   다크 모드 컨텍스트 정의
+// ================================
+interface ColorModeContextValue {
+  mode: Mode;
+  toggleColorMode: () => void;
+}
 
-    return disableCustomTheme
-      ? {}
-      : createTheme({
-          cssVariables: {
-            colorSchemeSelector: "data-mui-color-scheme",
-            cssVarPrefix: "template",
-          },
-          // defaultColorScheme: "light" (이 설정만으로는 부족하여 아래 palette를 직접 설정합니다.)
-          
-          // 💡 colorSchemes 대신, 선택된 모드의 팔레트만 적용하여 위젯이 해당 모드의 색상을 사용하도록 강제합니다.
-          palette: {
-            ...selectedColorScheme.palette,
-            mode: mode, // 현재 모드를 다시 한 번 명시합니다.
-          },
-          
-          typography,
-          shadows,
-          shape,
-          components: {
-            ...inputsCustomizations,
-            ...dataDisplayCustomizations,
-            ...feedbackCustomizations,
-            ...navigationCustomizations,
-            ...surfacesCustomizations,
-            ...themeComponents,
-          },
+const ColorModeContext =
+  React.createContext<ColorModeContextValue | undefined>(undefined);
+
+// 어디서나 쓰는 훅
+export const useColorMode = () => {
+  const ctx = React.useContext(ColorModeContext);
+  if (!ctx) {
+    throw new Error("useColorMode는 AppTheme 내부에서만 사용할 수 있습니다.");
+  }
+  return ctx;
+};
+
+// ================================
+//   AppTheme 컴포넌트
+// ================================
+export default function AppTheme(props: AppThemeProps) {
+  const { children, disableCustomTheme, themeComponents, mode: modeProp } =
+    props;
+
+  // 🔹 전역 다크모드 상태
+  const [mode, setMode] = React.useState<Mode>(() => {
+    // localStorage에 저장된 모드가 있으면 우선 사용
+    if (typeof window !== "undefined") {
+      const saved = window.localStorage.getItem("mui-mode") as Mode | null;
+      if (saved === "light" || saved === "dark") {
+        return saved;
+      }
+    }
+    // 그다음 prop으로 받은 초기 모드, 없으면 light
+    return modeProp ?? "light";
+  });
+
+  // (선택) 바깥에서 mode prop을 변경했을 때 동기화하고 싶다면
+  React.useEffect(() => {
+    if (modeProp && modeProp !== mode) {
+      setMode(modeProp);
+    }
+  }, [modeProp]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const colorMode = React.useMemo(
+    () => ({
+      mode,
+      toggleColorMode: () => {
+        setMode((prev) => {
+          const next = prev === "light" ? "dark" : "light";
+          if (typeof window !== "undefined") {
+            window.localStorage.setItem("mui-mode", next);
+          }
+          return next;
         });
-  }, [disableCustomTheme, themeComponents, mode]); // 💡 mode가 바뀔 때마다 테마가 재생성되도록 의존성 배열에 추가
+      },
+    }),
+    [mode]
+  );
+
+  // 🔹 현재 모드에 맞는 팔레트 선택 + 다크 모드 배경/텍스트 톤 조정
+  const theme = React.useMemo(() => {
+    const selectedColorScheme = colorSchemes[mode] ?? colorSchemes.light;
+
+    if (disableCustomTheme) {
+      // docs 용도. 실제 앱에서는 거의 사용 안 함.
+      return createTheme({ palette: { mode } });
+    }
+
+    // base palette (colorSchemes에서 온 값)
+    const basePalette = selectedColorScheme.palette ?? {};
+
+    const palette =
+      mode === "dark"
+        ? {
+            ...basePalette,
+            mode: "dark",
+            background: {
+              ...(basePalette as any).background,
+              // 🔹 너무 새까만 느낌 대신 조금 밝은 다크톤
+              default: "#111827", // 전체 배경
+              paper: "#020617", // 카드/패널 배경
+            },
+            text: {
+              ...(basePalette as any).text,
+              primary: "#F9FAFB",
+              secondary: "#9CA3AF",
+            },
+          }
+        : {
+            ...basePalette,
+            mode: "light",
+            // 라이트 모드는 colorSchemes에 정의된 대로 사용
+          };
+
+    return createTheme({
+      cssVariables: {
+        colorSchemeSelector: "data-mui-color-scheme",
+        cssVarPrefix: "template",
+      },
+      palette,
+      typography,
+      shadows,
+      shape,
+      components: {
+        ...inputsCustomizations,
+        ...dataDisplayCustomizations,
+        ...feedbackCustomizations,
+        ...navigationCustomizations,
+        ...surfacesCustomizations,
+        ...themeComponents,
+      },
+    });
+  }, [disableCustomTheme, themeComponents, mode]);
 
   if (disableCustomTheme) {
-    return <React.Fragment>{children}</React.Fragment>;
+    // docs 용: 굳이 ColorModeContext가 필요 없으면 이렇게 둬도 되고,
+    // 실제 서비스에서는 보통 false라서 아래 분기만 쓰이게 됨.
+    return (
+      <ThemeProvider theme={theme} disableTransitionOnChange>
+        <CssBaseline />
+        {children}
+      </ThemeProvider>
+    );
   }
+
   return (
-    <ThemeProvider theme={theme} disableTransitionOnChange>
-      {children}
-    </ThemeProvider>
+    <ColorModeContext.Provider value={colorMode}>
+      <ThemeProvider theme={theme} disableTransitionOnChange>
+        <CssBaseline />
+        {children}
+      </ThemeProvider>
+    </ColorModeContext.Provider>
   );
 }

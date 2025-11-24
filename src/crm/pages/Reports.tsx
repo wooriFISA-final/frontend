@@ -1,3 +1,4 @@
+// src/crm/pages/Reports.tsx
 import * as React from "react";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
@@ -101,17 +102,17 @@ const ReportCard: React.FC<ReportCardProps> = ({ report, onView }) => {
   return (
     <Card
       elevation={1}
-      sx={{
+      sx={(theme) => ({
         p: 1.5,
         borderRadius: 2,
         transition: "box-shadow 0.3s, transform 0.2s",
-        backgroundColor: "#FFFFFF !important",
+        bgcolor: "background.paper",
         "&:hover": {
-          boxShadow: "0 6px 12px rgba(0, 0, 0, 0.15)",
+          boxShadow: theme.shadows[6],
           transform: "translateY(-2px)",
           cursor: "pointer",
         },
-      }}
+      })}
       onClick={() => onView(report)}
     >
       <CardContent sx={{ p: 1.5, "&:last-child": { pb: 1.5 } }}>
@@ -119,7 +120,7 @@ const ReportCard: React.FC<ReportCardProps> = ({ report, onView }) => {
           <Typography
             variant="subtitle1"
             fontWeight={700}
-            color="#0074E9"
+            color="#0074E9" // 브랜드 컬러는 그대로 사용
             sx={{ textDecoration: "underline" }}
           >
             {createdDate.getFullYear()}년 {createdDate.getMonth() + 1}월 통합 리포트
@@ -132,7 +133,7 @@ const ReportCard: React.FC<ReportCardProps> = ({ report, onView }) => {
           {report.cluster_nickname && (
             <Typography
               variant="body2"
-              sx={{ color: "#555", fontWeight: 500 }}
+              sx={{ color: "text.secondary", fontWeight: 500 }}
             >
               소비 성향: {report.cluster_nickname}
             </Typography>
@@ -166,19 +167,29 @@ const AnalysisBlock: React.FC<{
     <Box
       sx={{
         p: 3,
-        border: "1px solid #eee",
         borderRadius: 1,
-        backgroundColor: "#fff",
+        bgcolor: "background.paper",
+        border: 1,
+        borderColor: "divider",
         minHeight: 80,
       }}
     >
-      <Typography variant="h6" fontWeight={600} mb={1} sx={{ color: "#444" }}>
+      <Typography
+        variant="h6"
+        fontWeight={600}
+        mb={1}
+        sx={{ color: "text.primary" }}
+      >
         {title}
       </Typography>
       {typeof content === "string" ? (
         <Typography
           variant="body1"
-          sx={{ color: "black", lineHeight: 1.8, whiteSpace: "pre-wrap" }}
+          sx={{
+            color: "text.primary",
+            lineHeight: 1.8,
+            whiteSpace: "pre-wrap",
+          }}
         >
           {content}
         </Typography>
@@ -252,7 +263,7 @@ const ReportDetailView: React.FC<ReportDetailViewProps> = ({
         mx: "auto",
         px: { xs: 2, md: 3 },
         py: { xs: 3, md: 4 },
-        backgroundColor: "#FFFFFF !important",
+        bgcolor: "background.paper",
       }}
     >
       {/* 뒤로가기 버튼 */}
@@ -273,7 +284,7 @@ const ReportDetailView: React.FC<ReportDetailViewProps> = ({
 
       {/* 상단 제목/메타 정보 */}
       <Stack direction="row" alignItems="center" spacing={2} mb={1}>
-        <Typography variant="h5" fontWeight={600} color="#222222">
+        <Typography variant="h5" fontWeight={600} color="text.primary">
           {createdDate.getFullYear()}년 {createdDate.getMonth() + 1}월 상세 통합 분석 보고서
         </Typography>
         {report.cluster_nickname && (
@@ -327,7 +338,7 @@ const ReportDetailView: React.FC<ReportDetailViewProps> = ({
                   <Typography
                     variant="body2"
                     sx={{
-                      color: "gray",
+                      color: "text.secondary",
                       whiteSpace: "pre-wrap",
                       fontFamily: "monospace",
                     }}
@@ -359,7 +370,7 @@ const ReportDetailView: React.FC<ReportDetailViewProps> = ({
                   <Typography
                     variant="body1"
                     sx={{
-                      color: "black",
+                      color: "text.primary",
                       lineHeight: 1.8,
                       whiteSpace: "pre-wrap",
                       mb: 1.5,
@@ -524,7 +535,7 @@ const ReportDetailView: React.FC<ReportDetailViewProps> = ({
 // 6. 메인 Reports 컴포넌트 (목록 화면)
 // ----------------------------------------------------
 export default function Reports() {
-  const { accessToken, isLoggedIn } = useAuth();
+  const { accessToken } = useAuth();
   const [reports, setReports] = React.useState<ReportDto[]>([]);
   const [selectedReport, setSelectedReport] =
     React.useState<ReportDto | null>(null);
@@ -538,10 +549,7 @@ export default function Reports() {
       try {
         const res = await axios.get<ReportDto[]>(API_URL, {
           timeout: 15000,
-          // Authorization 헤더 필요하면 여기서 추가:
-          headers: accessToken
-            ? { Authorization: `Bearer ${accessToken}` } 
-            : {},
+          headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
         });
         setReports(res.data);
       } catch (err: any) {
@@ -575,7 +583,7 @@ export default function Reports() {
         width: "100%",
         maxWidth: { sm: "100%", md: "1700px" },
         mx: "auto",
-        backgroundColor: "#FFFFFF !important",
+        bgcolor: "background.paper",
       }}
     >
       <Stack
@@ -587,7 +595,7 @@ export default function Reports() {
         <Typography
           variant="h4"
           component="h1"
-          sx={{ color: "#222222", fontWeight: 600 }}
+          sx={{ color: "text.primary", fontWeight: 600 }}
         >
           Reports Overview
         </Typography>

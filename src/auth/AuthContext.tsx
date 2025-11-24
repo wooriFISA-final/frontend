@@ -5,6 +5,7 @@ interface AuthContextType {
   isLoggedIn: boolean;
   accessToken: string | null;      // 토큰 상태
   userName: string | null;         // 로그인한 사용자 이름
+  userEmail: string | null;        // 로그인한 사용자 이메일
   login: (token?: string) => void; // 토큰(옵션)
   logout: () => void;
 }
@@ -22,6 +23,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   });
 
   const [userName, setUserName] = useState<string | null>(null);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
 
   // 현재 사용자 정보 불러오기
   const fetchCurrentUser = async (token: string) => {
@@ -43,6 +45,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       // ✅ 백엔드 응답 필드명(id, name, email)에 맞게 name 사용
       setUserName(data.name || data.user_name || null);
+      setUserEmail(data.email || null);
     } catch (err) {
       console.error("fetchCurrentUser error:", err);
     }
@@ -77,11 +80,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setAccessToken(null);
     setIsLoggedIn(false);
     setUserName(null);
+    setUserEmail(null);
   };
 
   return (
     <AuthContext.Provider
-      value={{ isLoggedIn, accessToken, userName, login, logout }}
+      value={{ isLoggedIn, accessToken, userName, userEmail, login, logout }}
     >
       {children}
     </AuthContext.Provider>

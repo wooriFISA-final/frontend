@@ -1,3 +1,4 @@
+// src/crm/components/CrmNavbarBreadcrumbs.tsx
 import * as React from "react";
 import { useLocation, Link as RouterLink } from "react-router-dom";
 import Breadcrumbs from "@mui/material/Breadcrumbs";
@@ -6,24 +7,27 @@ import Typography from "@mui/material/Typography";
 import HomeRoundedIcon from "@mui/icons-material/HomeRounded";
 import NavigateNextRoundedIcon from "@mui/icons-material/NavigateNextRounded";
 
-function capitalizeFirstLetter(string: string) {
-  return string.charAt(0).toUpperCase() + string.slice(1);
+function capitalizeFirstLetter(str: string) {
+  if (!str) return "";
+  return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
 export default function CrmNavbarBreadcrumbs() {
   const location = useLocation();
   const segments = location.pathname.split("/").filter(Boolean);
 
-  // 현재 위치의 마지막 세그먼트 (예: /dashboard → "dashboard", /plan → "plan")
   const lastSegment = segments[segments.length - 1];
 
-  // "홈 페이지인지" 판별: / 또는 /dashboard 같은 경우
+  // 🔹 /, /home, /dashboard 를 홈 페이지로 취급
   const isHomePage =
-    segments.length === 0 || (segments.length === 1 && lastSegment === "dashboard");
+    segments.length === 0 ||
+    (segments.length === 1 &&
+      (lastSegment === "dashboard" || lastSegment === "home"));
 
-  // Plan / Reports 등 서브 페이지 라벨
   const subLabel =
-    lastSegment && lastSegment !== "dashboard"
+    lastSegment &&
+    lastSegment !== "dashboard" &&
+    lastSegment !== "home"
       ? capitalizeFirstLetter(lastSegment)
       : "";
 
@@ -31,15 +35,18 @@ export default function CrmNavbarBreadcrumbs() {
     <Breadcrumbs
       separator={<NavigateNextRoundedIcon fontSize="small" />}
       aria-label="breadcrumb"
-      sx={{ mb: 1, color: "#666666" }}
+      sx={{ mb: 1, color: "text.secondary" }} // 🔹 기본 글자색은 보조 텍스트 색
     >
       {/* 항상 나오는 Home 링크 */}
       <Link
         component={RouterLink}
         underline="hover"
-        color="inherit"
-        to="/dashboard" // Home 누르면 /dashboard 로 이동
-        sx={{ display: "flex", alignItems: "center", color: "#0074E9" }}
+        to="/home" // 🔹 홈으로 이동
+        sx={(theme) => ({
+          display: "flex",
+          alignItems: "center",
+          color: theme.palette.primary.main, // 🔹 브랜드 블루
+        })}
       >
         <HomeRoundedIcon sx={{ mr: 0.5 }} fontSize="small" />
         Home
@@ -47,7 +54,12 @@ export default function CrmNavbarBreadcrumbs() {
 
       {/* 홈 페이지가 아닐 때만 두 번째 crumb 표시 */}
       {!isHomePage && subLabel && (
-        <Typography sx={{ color: "#666666", fontWeight: 500 }}>
+        <Typography
+          sx={{
+            color: "text.secondary",
+            fontWeight: 500,
+          }}
+        >
           {subLabel}
         </Typography>
       )}

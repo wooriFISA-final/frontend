@@ -1,3 +1,4 @@
+// src/crm/components/CrmMenuContent.tsx
 import * as React from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import Box from "@mui/material/Box";
@@ -16,7 +17,8 @@ import SettingsRoundedIcon from "@mui/icons-material/SettingsRounded";
 import HelpOutlineRoundedIcon from "@mui/icons-material/HelpOutlineRounded";
 
 const mainListItems = [
-  { text: "Home", icon: <HomeRoundedIcon />, path: "/dashboard" },
+  // 🔹 실제 라우트에 맞게 /home 으로 수정
+  { text: "Home", icon: <HomeRoundedIcon />, path: "/home" },
   { text: "Plan", icon: <SmartToyRoundedIcon />, path: "/plan" },
   { text: "Reports", icon: <AssessmentRoundedIcon />, path: "/reports" },
 ];
@@ -30,7 +32,9 @@ interface CrmMenuContentProps {
   isCollapsed?: boolean;
 }
 
-export default function CrmMenuContent({ isCollapsed = false }: CrmMenuContentProps) {
+export default function CrmMenuContent({
+  isCollapsed = false,
+}: CrmMenuContentProps) {
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -38,38 +42,61 @@ export default function CrmMenuContent({ isCollapsed = false }: CrmMenuContentPr
     navigate(path);
   };
 
-  const menuButton = (item: typeof mainListItems[0], selected: boolean) => (
+  const menuButton = (item: (typeof mainListItems)[0], selected: boolean) => (
     <Tooltip title={isCollapsed ? item.text : ""} placement="right">
       <ListItemButton
         selected={selected}
         onClick={() => handleNavigation(item.path)}
-        sx={{
+        sx={(theme) => ({
           borderRadius: 1.5,
-          backgroundColor: selected ? "#E6F0FF" : "transparent",
-          color: selected ? "#0074E9" : "#222222",
           px: isCollapsed ? 1.5 : 2,
           py: 1.5,
           justifyContent: isCollapsed ? "center" : "flex-start",
           minHeight: 44,
-          "&:hover": {
-            backgroundColor: selected ? "#E6F0FF" : "#F5F7FA",
-          },
           transition: "all 0.2s ease",
+          // 🔹 기본 글자색: 보조 텍스트 색
+          color: selected
+            ? theme.palette.text.primary
+            : theme.palette.text.secondary,
+          backgroundColor: selected
+            ? theme.palette.action.selected
+            : "transparent",
+          "&:hover": {
+            backgroundColor: selected
+              ? theme.palette.action.selected
+              : theme.palette.action.hover,
+          },
           "& .MuiListItemIcon-root": {
-            color: "inherit",
             minWidth: isCollapsed ? 0 : 40,
             fontSize: "1.3rem",
+            // 🔹 아이콘도 선택 시 primary, 아니면 보조 텍스트 색
+            color: selected
+              ? theme.palette.primary.main
+              : theme.palette.text.secondary,
           },
-        }}
+        })}
       >
         <ListItemIcon>{item.icon}</ListItemIcon>
-        {!isCollapsed && <ListItemText primary={item.text} />}
+        {!isCollapsed && (
+          <ListItemText
+            primary={item.text}
+            primaryTypographyProps={{
+              sx: { fontWeight: 500 },
+            }}
+          />
+        )}
       </ListItemButton>
     </Tooltip>
   );
 
   return (
-    <Stack sx={{ flexGrow: 1, p: isCollapsed ? 0.5 : 1, justifyContent: "space-between" }}>
+    <Stack
+      sx={{
+        flexGrow: 1,
+        p: isCollapsed ? 0.5 : 1,
+        justifyContent: "space-between",
+      }}
+    >
       <List dense sx={{ p: 0 }}>
         {mainListItems.map((item, index) => (
           <ListItem key={index} disablePadding sx={{ display: "block", mb: 0.5 }}>
@@ -78,7 +105,7 @@ export default function CrmMenuContent({ isCollapsed = false }: CrmMenuContentPr
         ))}
       </List>
       <Box>
-        {!isCollapsed && <Divider sx={{ my: 1, borderColor: "#F0F2F5" }} />}
+        {!isCollapsed && <Divider sx={{ my: 1, borderColor: "divider" }} />}
         <List dense sx={{ p: 0 }}>
           {secondaryListItems.map((item, index) => (
             <ListItem key={index} disablePadding sx={{ display: "block", mb: 0.5 }}>

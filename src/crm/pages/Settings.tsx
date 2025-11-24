@@ -1,3 +1,4 @@
+// src/crm/pages/Settings.tsx
 import * as React from "react";
 import Box from "@mui/material/Box";
 import Card from "@mui/material/Card";
@@ -8,14 +9,21 @@ import Switch from "@mui/material/Switch";
 import Divider from "@mui/material/Divider";
 import Button from "@mui/material/Button";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../auth/AuthContext";
+import { useColorMode } from "../../shared-theme/AppTheme";
 
 export default function Settings() {
   const [notifications, setNotifications] = React.useState(true);
   const [emailDigest, setEmailDigest] = React.useState(false);
-  const [darkMode, setDarkMode] = React.useState(false);
+
   const navigate = useNavigate();
+  const { logout } = useAuth();
+  const { mode, toggleColorMode } = useColorMode();
 
-
+  const handleLogout = () => {
+    logout();
+    navigate("/", { replace: true });
+  };
 
   const settingsSections = [
     {
@@ -41,19 +49,29 @@ export default function Settings() {
         {
           label: "Dark Mode",
           description: "Enable dark theme for the application",
-          state: darkMode,
-          setState: setDarkMode,
+          state: mode === "dark",
+          setState: () => toggleColorMode(),
         },
       ],
     },
   ];
 
   return (
-    <Box sx={{ width: "100%", maxWidth: { sm: "100%", md: "1700px" } }}>
-      <Typography variant="h4" component="h1" sx={{ mb: 2, color: "#222222", fontWeight: 600 }}>
+    <Box
+      sx={(theme) => ({
+        width: "100%",
+        maxWidth: { sm: "100%", md: "1700px" },
+        color: theme.palette.text.primary,
+      })}
+    >
+      <Typography
+        variant="h4"
+        component="h1"
+        sx={{ mb: 2, fontWeight: 600 }}
+      >
         Settings
       </Typography>
-      <Typography sx={{ color: "#666666", mb: 4 }}>
+      <Typography sx={{ mb: 4, color: "text.secondary" }}>
         Manage your CRM preferences and account settings.
       </Typography>
 
@@ -62,14 +80,17 @@ export default function Settings() {
           <Card
             key={sectionIndex}
             sx={{
-              backgroundColor: "#FFFFFF",
-              borderColor: "#F0F2F5",
-              boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)",
+              bgcolor: "background.paper",      // 🔹 하얀색 고정 → 테마 카드 색
+              borderColor: "divider",
+              boxShadow: 1,
               border: "none",
             }}
           >
             <CardContent>
-              <Typography variant="h6" sx={{ color: "#222222", fontWeight: 600, mb: 2 }}>
+              <Typography
+                variant="h6"
+                sx={{ fontWeight: 600, mb: 2, color: "text.primary" }}
+              >
                 {section.title}
               </Typography>
               {section.items.map((item, itemIndex) => (
@@ -81,10 +102,16 @@ export default function Settings() {
                     sx={{ py: 1.5 }}
                   >
                     <Box sx={{ flex: 1 }}>
-                      <Typography sx={{ color: "#222222", fontWeight: 500 }}>
+                      <Typography sx={{ fontWeight: 500, color: "text.primary" }}>
                         {item.label}
                       </Typography>
-                      <Typography sx={{ color: "#999999", fontSize: "0.875rem", mt: 0.25 }}>
+                      <Typography
+                        sx={{
+                          color: "text.secondary",
+                          fontSize: "0.875rem",
+                          mt: 0.25,
+                        }}
+                      >
                         {item.description}
                       </Typography>
                     </Box>
@@ -102,7 +129,7 @@ export default function Settings() {
                     />
                   </Stack>
                   {itemIndex < section.items.length - 1 && (
-                    <Divider sx={{ borderColor: "#F0F2F5" }} />
+                    <Divider sx={{ borderColor: "divider" }} />
                   )}
                 </Box>
               ))}
@@ -112,14 +139,17 @@ export default function Settings() {
 
         <Card
           sx={{
-            backgroundColor: "#FFFFFF",
-            borderColor: "#F0F2F5",
-            boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)",
+            bgcolor: "background.paper",
+            borderColor: "divider",
+            boxShadow: 1,
             border: "none",
           }}
         >
           <CardContent>
-            <Typography variant="h6" sx={{ color: "#222222", fontWeight: 600, mb: 2 }}>
+            <Typography
+              variant="h6"
+              sx={{ fontWeight: 600, mb: 2, color: "text.primary" }}
+            >
               Account
             </Typography>
             <Stack spacing={1}>
@@ -133,7 +163,7 @@ export default function Settings() {
                   fontWeight: 500,
                   "&:hover": {
                     borderColor: "#0074E9",
-                    backgroundColor: "#F5F7FA",
+                    backgroundColor: "action.hover",
                   },
                 }}
               >
@@ -142,6 +172,7 @@ export default function Settings() {
               <Button
                 variant="outlined"
                 fullWidth
+                onClick={handleLogout}
                 sx={{
                   borderColor: "#F0A0A0",
                   color: "#DC2626",
@@ -149,7 +180,7 @@ export default function Settings() {
                   fontWeight: 500,
                   "&:hover": {
                     borderColor: "#DC2626",
-                    backgroundColor: "#FEE2E2",
+                    backgroundColor: "error.lighter",
                   },
                 }}
               >

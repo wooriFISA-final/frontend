@@ -1,93 +1,116 @@
+// src/crm/components/ChatMessageBubble.tsx
 import * as React from "react";
 import Box from "@mui/material/Box";
-import Paper from "@mui/material/Paper";
 import Typography from "@mui/material/Typography";
-import Stack from "@mui/material/Stack";
 import Avatar from "@mui/material/Avatar";
 
 interface ChatMessageBubbleProps {
   message: string;
   sender: "user" | "ai";
-  timestamp?: string;
-  avatarUrl?: string;
+  timestamp: string;
 }
 
 export default function ChatMessageBubble({
   message,
   sender,
   timestamp,
-  avatarUrl,
 }: ChatMessageBubbleProps) {
   const isUser = sender === "user";
 
   return (
-    <Stack
-      direction="row"
-      spacing={1}
+    <Box
       sx={{
+        display: "flex",
         justifyContent: isUser ? "flex-end" : "flex-start",
-        mb: 2,
-        alignItems: "flex-end",
+        mb: 1.5,
+        px: 1,
       }}
     >
+      {/* 왼쪽 AI 아바타 */}
       {!isUser && (
         <Avatar
           sx={{
             width: 32,
             height: 32,
-            bgcolor: "#0074E9",
-            fontSize: "0.75rem",
-            color: "#FFFFFF",
+            bgcolor: "primary.main",
+            fontSize: "0.8rem",
+            mr: 1.5,
           }}
         >
           AI
         </Avatar>
       )}
-      <Paper
+
+      <Box
         sx={{
           maxWidth: "70%",
-          px: 2.5,
-          py: 1.75,
-          bgcolor: isUser ? "#0074E9" : "#F5F7FA",
-          color: isUser ? "#FFFFFF" : "#1F2937",
-          borderRadius: 2.5,
-          boxShadow: isUser
-            ? "0 2px 8px rgba(0, 116, 233, 0.15)"
-            : "0 1px 3px rgba(0, 0, 0, 0.05)",
-          border: isUser ? "none" : "1px solid #E5E7EB",
-          transition: "all 0.2s ease",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: isUser ? "flex-end" : "flex-start",
         }}
-        elevation={0}
       >
-        <Typography variant="body2" sx={{ lineHeight: 1.5 }}>
-          {message}
-        </Typography>
-        {timestamp && (
+        {/* 💬 말풍선 (타원형) */}
+        <Box
+          sx={(theme) => ({
+            px: 2.5,
+            py: 1.2,
+            borderRadius: "999px", // 🔹 완전 타원형 모양
+            bgcolor: isUser
+              ? theme.palette.mode === "dark"
+                ? theme.palette.primary.main
+                : "#3B82F6"
+              : theme.palette.mode === "dark"
+              ? "rgba(148, 163, 184, 0.24)" // slate-400 약한 투명
+              : "#F3F4F6",
+            color: isUser ? "#FFFFFF" : theme.palette.text.primary,
+            boxShadow:
+              theme.palette.mode === "dark"
+                ? "0 2px 4px rgba(0,0,0,0.35)"
+                : "0 1px 2px rgba(15,23,42,0.15)",
+            backdropFilter: theme.palette.mode === "dark" ? "blur(4px)" : "none",
+          })}
+        >
           <Typography
-            variant="caption"
+            variant="body2"
             sx={{
-              display: "block",
-              mt: 0.5,
-              opacity: 0.7,
+              whiteSpace: "pre-wrap",
+              wordBreak: "break-word",
+              lineHeight: 1.6,
             }}
           >
-            {timestamp}
+            {message}
           </Typography>
-        )}
-      </Paper>
+        </Box>
+
+        {/* 시간 표시 */}
+        <Typography
+          variant="caption"
+          sx={(theme) => ({
+            mt: 0.5,
+            color:
+              theme.palette.mode === "dark"
+                ? "rgba(148,163,184,0.9)"
+                : "text.secondary",
+          })}
+        >
+          {timestamp}
+        </Typography>
+      </Box>
+
+      {/* 오른쪽 유저 아바타 */}
       {isUser && (
         <Avatar
-          src={avatarUrl}
           sx={{
             width: 32,
             height: 32,
-            bgcolor: "#0074E9",
-            color: "#FFFFFF",
+            bgcolor: "primary.main",
+            fontSize: "0.8rem",
+            ml: 1.5,
           }}
         >
-          U
+          나
         </Avatar>
       )}
-    </Stack>
+    </Box>
   );
 }

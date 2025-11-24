@@ -1,16 +1,17 @@
+// src/crm/components/ChatSidebar.tsx
 import * as React from "react";
 import Box from "@mui/material/Box";
 import Stack from "@mui/material/Stack";
 import Paper from "@mui/material/Paper";
 import Typography from "@mui/material/Typography";
 import Avatar from "@mui/material/Avatar";
-import Button from "@mui/material/Button";
 import Divider from "@mui/material/Divider";
 import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
 import ListItemButton from "@mui/material/ListItemButton";
 import ListItemText from "@mui/material/ListItemText";
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
+import { useTheme } from "@mui/material/styles"; // 🔹 테마 사용
 
 interface ConversationHistory {
   id: string;
@@ -42,6 +43,8 @@ export default function ChatSidebar({
   onDeleteConversation,
   activeConversationId,
 }: ChatSidebarProps) {
+  const theme = useTheme();
+
   return (
     <Paper
       sx={{
@@ -49,24 +52,25 @@ export default function ChatSidebar({
         width: "100%",
         display: "flex",
         flexDirection: "column",
-        bgcolor: "#FFFFFF",
+        bgcolor: theme.palette.background.paper, // 🔹 다크/라이트 공통 카드 배경
         borderRadius: 2,
         boxShadow: "0 2px 8px rgba(0, 0, 0, 0.05)",
         pt: 2.5,
         px: 2,
         overflow: "auto",
-        border: "1px solid #F0F2F5",
+        border: `1px solid ${theme.palette.divider}`, // 🔹 구분선도 테마 기반
       }}
       elevation={0}
     >
       <Stack spacing={2} sx={{ flexGrow: 1 }}>
+        {/* 사용자 프로필 영역 */}
         <Stack direction="row" spacing={2} alignItems="center" sx={{ px: 1 }}>
           <Avatar
             src={userProfile.avatar}
             sx={{
               width: 40,
               height: 40,
-              bgcolor: "primary.main",
+              bgcolor: theme.palette.primary.main,
             }}
           >
             {userProfile.name
@@ -82,6 +86,7 @@ export default function ChatSidebar({
                 overflow: "hidden",
                 textOverflow: "ellipsis",
                 whiteSpace: "nowrap",
+                color: theme.palette.text.primary,
               }}
             >
               {userProfile.name}
@@ -89,7 +94,7 @@ export default function ChatSidebar({
             <Typography
               variant="caption"
               sx={{
-                color: "text.secondary",
+                color: theme.palette.text.secondary,
                 overflow: "hidden",
                 textOverflow: "ellipsis",
                 whiteSpace: "nowrap",
@@ -102,6 +107,7 @@ export default function ChatSidebar({
 
         <Divider sx={{ my: 1 }} />
 
+        {/* 새 채팅 버튼 */}
         <Box
           onClick={onNewChat}
           sx={{
@@ -109,8 +115,8 @@ export default function ChatSidebar({
             py: 1.2,
             px: 2,
             borderRadius: 2,
-            backgroundColor: "#0074E9",
-            color: "#FFFFFF",
+            backgroundColor: theme.palette.primary.main,
+            color: theme.palette.primary.contrastText,
             fontWeight: 500,
             fontSize: "0.95rem",
             display: "flex",
@@ -121,7 +127,7 @@ export default function ChatSidebar({
             transition: "all 0.2s ease",
             boxShadow: "0 2px 8px rgba(0, 116, 233, 0.15)",
             "&:hover": {
-              backgroundColor: "#3399FF",
+              backgroundColor: theme.palette.primary.dark,
               boxShadow: "0 4px 12px rgba(0, 116, 233, 0.25)",
             },
           }}
@@ -130,12 +136,13 @@ export default function ChatSidebar({
           New Chat
         </Box>
 
+        {/* 최근 대화 목록 */}
         <Box>
           <Typography
             variant="caption"
             sx={{
               fontWeight: 600,
-              color: "text.secondary",
+              color: theme.palette.text.secondary,
               px: 1,
               display: "block",
               mb: 1,
@@ -145,46 +152,56 @@ export default function ChatSidebar({
           </Typography>
           <List sx={{ p: 0 }}>
             {conversationHistory.length > 0 ? (
-              conversationHistory.map((conversation) => (
-                <ListItem
-                  key={conversation.id}
-                  disablePadding
-                  sx={{
-                    mb: 0.5,
-                  }}
-                >
-                  <ListItemButton
-                    selected={activeConversationId === conversation.id}
-                    onClick={() => onSelectConversation?.(conversation.id)}
+              conversationHistory.map((conversation) => {
+                const selected = activeConversationId === conversation.id;
+                return (
+                  <ListItem
+                    key={conversation.id}
+                    disablePadding
                     sx={{
-                      borderRadius: 2,
-                      py: 1.2,
-                      bgcolor: activeConversationId === conversation.id ? "#E6F0FF" : "transparent",
-                      color: activeConversationId === conversation.id ? "#0074E9" : "#222222",
-                      transition: "all 0.2s ease",
-                      "&:hover": {
-                        bgcolor: "#F5F7FA",
-                      },
+                      mb: 0.5,
                     }}
                   >
-                    <ListItemText
-                      primary={conversation.title}
-                      secondary={conversation.timestamp}
-                      primaryTypographyProps={{
-                        variant: "body2",
-                        sx: {
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
+                    <ListItemButton
+                      selected={selected}
+                      onClick={() => onSelectConversation?.(conversation.id)}
+                      sx={{
+                        borderRadius: 2,
+                        py: 1.2,
+                        bgcolor: selected
+                          ? theme.palette.action.selected
+                          : "transparent",
+                        color: selected
+                          ? theme.palette.primary.main
+                          : theme.palette.text.primary,
+                        transition: "all 0.2s ease",
+                        "&:hover": {
+                          bgcolor: selected
+                            ? theme.palette.action.selected
+                            : theme.palette.action.hover,
                         },
                       }}
-                      secondaryTypographyProps={{
-                        variant: "caption",
-                      }}
-                    />
-                  </ListItemButton>
-                </ListItem>
-              ))
+                    >
+                      <ListItemText
+                        primary={conversation.title}
+                        secondary={conversation.timestamp}
+                        primaryTypographyProps={{
+                          variant: "body2",
+                          sx: {
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          },
+                        }}
+                        secondaryTypographyProps={{
+                          variant: "caption",
+                          sx: { color: theme.palette.text.secondary },
+                        }}
+                      />
+                    </ListItemButton>
+                  </ListItem>
+                );
+              })
             ) : (
               <Typography
                 variant="body2"

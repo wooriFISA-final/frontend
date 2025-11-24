@@ -1,26 +1,31 @@
 // src/crm/components/CrmHeader.tsx
 import * as React from "react";
-import { useLocation } from "react-router-dom";   // ✅ 추가
+import { useLocation } from "react-router-dom";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
+import IconButton from "@mui/material/IconButton";
 import NotificationsRoundedIcon from "@mui/icons-material/NotificationsRounded";
-import MenuButton from "../../dashboard/components/MenuButton";
 import CrmSearch from "./CrmSearch";
 import CrmNavbarBreadcrumbs from "./CrmNavbarBreadcrumbs";
 
 export default function CrmHeader() {
   const location = useLocation();
 
-  // ✅ 경로별로 보여줄 제목 매핑
+  // 현재 경로에서 첫 세그먼트 추출: /home, /plan, /reports ...
+  const pathSegments = location.pathname.split("/").filter(Boolean);
+  const firstSegment = pathSegments[0] ?? "home";
+
+  // 경로별로 헤더 타이틀 매핑
   const titleMap: Record<string, string> = {
-    "/home": "Home",
-    "/plan": "Plan",
-    "/reports": "Reports",
-    "/": "Home",          // 필요하면 루트도 처리
+    home: "Home",
+    plan: "Plan",
+    reports: "Reports",
+    settings: "",
+    help: "",
+    profile: "",
   };
 
-  // 현재 path에 맞는 제목, 없으면 기본값 Home
-  const title = titleMap[location.pathname] ?? "Home";
+  const pageTitle = titleMap[firstSegment] ?? "Home";
 
   return (
     <Stack
@@ -35,21 +40,38 @@ export default function CrmHeader() {
       }}
       spacing={2}
     >
+      {/* 왼쪽: breadcrumb + 페이지 타이틀 */}
       <Stack direction="column" spacing={1}>
         <CrmNavbarBreadcrumbs />
         <Typography
           variant="h4"
           component="h1"
-          sx={{ fontWeight: 600, color: "#222222" }}
+          sx={{
+            fontWeight: 600,
+            color: "text.primary", // 🔹 라이트/다크 모드 모두에서 잘 보이게
+          }}
         >
-          {title}
+          {pageTitle}
         </Typography>
       </Stack>
-      <Stack direction="row" sx={{ gap: 1 }}>
+
+      {/* 오른쪽: 검색창 + 알림 아이콘 등 */}
+      <Stack
+        direction="row"
+        spacing={1.5}
+        sx={{
+          alignItems: "center",
+        }}
+      >
         <CrmSearch />
-        <MenuButton showBadge aria-label="Open notifications">
-          <NotificationsRoundedIcon />
-        </MenuButton>
+        <IconButton
+          size="small"
+          sx={{
+            borderRadius: 2,
+          }}
+        >
+          <NotificationsRoundedIcon fontSize="small" />
+        </IconButton>
       </Stack>
     </Stack>
   );

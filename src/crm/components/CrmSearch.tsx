@@ -1,7 +1,10 @@
+// src/crm/components/CrmSearch.tsx
 import * as React from "react";
 import InputBase from "@mui/material/InputBase";
 import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
-import { alpha, styled } from "@mui/material/styles";
+import { styled } from "@mui/material/styles";
+import { useSearch } from "../../search/SearchContext";
+import { useLocation, useNavigate } from "react-router-dom";
 
 const SearchWrapper = styled("div")({
   position: "relative",
@@ -52,6 +55,22 @@ const StyledInputBase = styled(InputBase)({
 });
 
 export default function CrmSearch() {
+  const { query, setQuery } = useSearch();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    const value = e.target.value;
+    setQuery(value);
+
+    // ✅ 검색어가 있고, 현재 페이지가 /help가 아니면 Help 페이지로 이동
+    if (value.trim() && location.pathname !== "/help") {
+      navigate("/help");
+    }
+  };
+
   return (
     <SearchWrapper>
       <SearchIconWrapper>
@@ -60,6 +79,8 @@ export default function CrmSearch() {
       <StyledInputBase
         placeholder="Search…"
         inputProps={{ "aria-label": "search" }}
+        value={query}
+        onChange={handleChange}
       />
     </SearchWrapper>
   );

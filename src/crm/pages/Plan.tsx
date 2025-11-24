@@ -1,3 +1,4 @@
+// src/crm/pages/Plan.tsx
 import * as React from "react";
 import Box from "@mui/material/Box";
 import Stack from "@mui/material/Stack";
@@ -7,6 +8,7 @@ import CircularProgress from "@mui/material/CircularProgress";
 import ChatSidebar from "../components/ChatSidebar";
 import ChatMessageBubble from "../components/ChatMessageBubble";
 import ChatInputArea from "../components/ChatInputArea";
+import { useAuth } from "../../auth/AuthContext";
 
 interface Message {
   id: string;
@@ -64,6 +66,16 @@ const suggestedPrompts = [
 const API_BASE_URL = "http://localhost:8080";
 
 export default function Plan() {
+  // ✅ 현재 로그인한 사용자 정보 (AuthContext)
+  const { userName } = useAuth();
+
+  const displayName = userName || "로그인 사용자";
+
+  // 나중에 로그인 시 localStorage.setItem("user_email", email) 해두면 여기서 자동 반영됨
+  const storedEmail =
+    typeof window !== "undefined" ? localStorage.getItem("user_email") : null;
+  const displayEmail = storedEmail ?? "";
+
   const [messages, setMessages] = React.useState<Message[]>(initialMessages);
   const [activeConversationId, setActiveConversationId] = React.useState(
     "conv-1"
@@ -127,7 +139,7 @@ export default function Plan() {
       setMessages((prev) => [...prev, aiResponse]);
     } catch (error) {
       console.error("Error calling chatbot API:", error);
-      
+
       // 에러 메시지 표시
       const errorMessage: Message = {
         id: `msg-${Date.now() + 1}`,
@@ -160,14 +172,15 @@ export default function Plan() {
 
   return (
     <Box
-      sx={{
+      sx={(theme) => ({
         display: "flex",
         width: "100%",
         height: "100%",
-        bgcolor: "#F8F9FB",
+        bgcolor: theme.palette.background.default, // 🔹 다크/라이트 공통 배경
         mt: { xs: 8, md: 0 },
-      }}
+      })}
     >
+      {/* 왼쪽 채팅 목록(사이드바) */}
       <Box
         sx={{
           width: 280,
@@ -179,8 +192,8 @@ export default function Plan() {
       >
         <ChatSidebar
           userProfile={{
-            name: "Sarah Johnson",
-            email: "sarah@acme.com",
+            name: displayName, // ✅ 현재 로그인한 사용자 이름
+            email: displayEmail, // ✅ (있다면) 현재 사용자 이메일
           }}
           conversationHistory={conversationHistory}
           onNewChat={handleNewChat}
@@ -190,28 +203,29 @@ export default function Plan() {
         />
       </Box>
 
+      {/* 오른쪽 대화 영역 */}
       <Box
-        sx={{
+        sx={(theme) => ({
           flexGrow: 1,
           display: "flex",
           flexDirection: "column",
           position: "relative",
-          bgcolor: "#F8F9FB",
+          bgcolor: theme.palette.background.default,
           p: 2,
-        }}
+        })}
       >
         <Paper
-          sx={{
+          sx={(theme) => ({
             flexGrow: 1,
             overflow: "auto",
             p: { xs: 2, md: 3 },
             borderRadius: 2,
-            mb: { xs: 14, sm: 11, md: 10 },
+            pb: 6,
             display: "flex",
             flexDirection: "column",
-            bgcolor: "#FFFFFF",
+            bgcolor: theme.palette.background.paper, // 🔹 카드/채팅 영역 배경
             boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
-          }}
+          })}
           elevation={0}
         >
           <Stack spacing={2} sx={{ flex: 1 }}>
@@ -226,10 +240,15 @@ export default function Plan() {
                   py: 8,
                 }}
               >
-                <Typography variant="h5" sx={{ fontWeight: 600, color: "#1F2937" }}>
+                <Typography
+                  variant="h5"
+                  sx={{ fontWeight: 600, color: "text.primary" }}
+                >
                   대화를 시작하세요
                 </Typography>
-                <Typography sx={{ color: "#6B7280", fontSize: "0.95rem" }}>
+                <Typography
+                  sx={{ color: "text.secondary", fontSize: "0.95rem" }}
+                >
                   무엇이든 물어보세요!
                 </Typography>
               </Stack>
@@ -252,7 +271,9 @@ export default function Plan() {
                 }}
               >
                 <CircularProgress size={20} />
-                <Typography sx={{ color: "#6B7280", fontSize: "0.9rem" }}>
+                <Typography
+                  sx={{ color: "text.secondary", fontSize: "0.9rem" }}
+                >
                   AI가 답변을 생성하고 있습니다...
                 </Typography>
               </Box>
@@ -261,6 +282,7 @@ export default function Plan() {
           </Stack>
         </Paper>
 
+        {/* 하단 입력 영역 */}
         <ChatInputArea
           onSendMessage={handleSendMessage}
           suggestedPrompts={suggestedPrompts}

@@ -1,3 +1,4 @@
+// src/crm/components/ChatInputArea.tsx
 import * as React from "react";
 import Box from "@mui/material/Box";
 import TextField from "@mui/material/TextField";
@@ -8,9 +9,9 @@ import SendIcon from "@mui/icons-material/Send";
 import Paper from "@mui/material/Paper";
 
 interface ChatInputAreaProps {
-  onSendMessage: (message: string) => void | Promise<void>;
+  onSendMessage: (message: string) => void;
   suggestedPrompts?: string[];
-  onSuggestedPromptClick?: (prompt: string) => void | Promise<void>;
+  onSuggestedPromptClick?: (prompt: string) => void;
   disabled?: boolean;
 }
 
@@ -44,31 +45,38 @@ export default function ChatInputArea({
 
   return (
     <Box
-      sx={{
-        position: "absolute",
+      sx={(theme) => ({
+        // Plan 우측 컬럼 안에서만 고정
+        position: "sticky",
         bottom: 0,
         left: 0,
         right: 0,
-        p: 2,
-        bgcolor: "transparent",
-      }}
+        // 🔹 위 채팅 박스와 같은 좌우 padding (Plan.tsx의 p: 2 과 맞춤)
+        px: 0,
+        // 🔹 채팅 영역과의 간격만 살짝
+        pt: 1,
+        pb: 2,
+        bgcolor: theme.palette.background.default,
+        zIndex: 1,
+      })}
     >
       <Paper
-        sx={{
-          p: 2.5,
-          borderRadius: 2,
-          bgcolor: "#FFFFFF",
-          boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
-          border: "1px solid #F0F2F5",
-        }}
         elevation={0}
+        sx={(theme) => ({
+          width: "100%",        // 🔹 상단 채팅 Paper와 같은 폭
+          borderRadius: 2,      // 🔹 위 채팅 Paper(borderRadius: 2)와 통일
+          p: 1.5,
+          bgcolor: "background.paper",
+          boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
+        })}
       >
+        {/* 추천 프롬프트 */}
         {suggestedPrompts.length > 0 && (
           <Stack
             direction="row"
             spacing={1}
             sx={{
-              mb: 2.5,
+              mb: 1.25,
               flexWrap: "wrap",
               gap: 1,
             }}
@@ -80,26 +88,21 @@ export default function ChatInputArea({
                 onClick={() => handlePromptClick(prompt)}
                 disabled={disabled}
                 sx={{
-                  bgcolor: "#F5F7FA",
-                  color: "#222222",
-                  fontSize: "0.875rem",
-                  fontWeight: 500,
-                  borderRadius: 2,
-                  border: "1px solid #E5E7EB",
-                  transition: "all 0.2s ease",
+                  bgcolor: "background.paper",
+                  color: "text.primary",
                   "&:hover": {
-                    bgcolor: disabled ? "#F5F7FA" : "#E6F0FF",
-                    borderColor: disabled ? "#E5E7EB" : "#0074E9",
-                    color: disabled ? "#222222" : "#0074E9",
+                    bgcolor: disabled ? "background.paper" : "action.hover",
                   },
                   cursor: disabled ? "not-allowed" : "pointer",
+                  fontSize: "0.85rem",
                 }}
               />
             ))}
           </Stack>
         )}
 
-        <Box sx={{ display: "flex", gap: 1.5, alignItems: "flex-end" }}>
+        {/* 입력창 + 전송 버튼 */}
+        <Box sx={{ display: "flex", gap: 1.25, alignItems: "center" }}>
           <TextField
             fullWidth
             multiline
@@ -107,56 +110,54 @@ export default function ChatInputArea({
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyPress={handleKeyPress}
-            placeholder={disabled ? "AI가 답변을 생성하고 있습니다..." : "메시지를 입력하세요..."}
+            placeholder={
+              disabled
+                ? "AI가 답변을 생성하고 있습니다..."
+                : "메시지를 입력하세요..."
+            }
             disabled={disabled}
             variant="outlined"
             sx={{
               "& .MuiOutlinedInput-root": {
-                borderRadius: 2,
-                bgcolor: "#F9FAFB",
-                color: "#1F2937",
-                transition: "all 0.2s ease",
+                borderRadius: 999,
+                bgcolor: "background.default",
                 "& fieldset": {
-                  borderColor: "#E5E7EB",
+                  borderColor: "divider",
                 },
                 "&:hover fieldset": {
-                  borderColor: "#D1D5DB",
+                  borderColor: "action.hover",
                 },
                 "&.Mui-focused fieldset": {
-                  borderColor: "#0074E9",
-                  borderWidth: 2,
+                  borderColor: "primary.main",
+                  borderWidth: 1,
                 },
               },
               "& .MuiOutlinedInput-input": {
-                color: "#1F2937",
-              },
-              "& .MuiInputBase-input::placeholder": {
-                color: "#9CA3AF",
-                opacity: 1,
+                // placeholder를 왼쪽 끝 + 수직 가운데 느낌으로
+                paddingY: "10px",
+                paddingX: "14px",
               },
             }}
           />
           <IconButton
             onClick={handleSend}
             disabled={!inputValue.trim() || disabled}
-            sx={{
-              bgcolor: "#0074E9",
+            sx={(theme) => ({
+              bgcolor: theme.palette.mode === "dark" ? "#1F2937" : "#3B82F6",
               color: "#FFFFFF",
-              transition: "all 0.2s ease",
-              boxShadow: "0 2px 8px rgba(0, 116, 233, 0.15)",
               "&:hover": {
-                bgcolor: "#3399FF",
-                boxShadow: "0 4px 12px rgba(0, 116, 233, 0.25)",
+                bgcolor:
+                  theme.palette.mode === "dark" ? "#374151" : "#2563EB",
               },
               "&:disabled": {
-                bgcolor: "#E5E7EB",
-                color: "#9CA3AF",
-                boxShadow: "none",
+                bgcolor: "action.disabledBackground",
+                color: "text.disabled",
               },
               width: 48,
               height: 48,
-              minWidth: 48,
-            }}
+              borderRadius: "50%",
+              flexShrink: 0,
+            })}
           >
             <SendIcon />
           </IconButton>
