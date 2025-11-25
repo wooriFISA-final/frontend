@@ -2,7 +2,6 @@
 import * as React from "react";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
-import Grid from "@mui/material/Grid";
 import Stack from "@mui/material/Stack";
 import Button from "@mui/material/Button";
 import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
@@ -13,6 +12,7 @@ import Chip from "@mui/material/Chip";
 import axios from "axios";
 import { useAuth } from "../../auth/AuthContext";
 
+// 🔹 Recharts (파이 차트)
 import {
   PieChart,
   Pie,
@@ -26,70 +26,162 @@ import {
 // 1. API 설정 + 타입 정의
 // ----------------------------------------------------
 
-// ⚠️ FastAPI /reports 엔드포인트 주소에 맞게 수정해서 사용하세요.
-const API_URL = "http://localhost:8080/chat/reports/";
+const API_URL = "http://localhost:8000/reports";
 
-// (선택) 예전처럼 차트용 JSON을 별도 컬럼으로 가지고 있는 경우
+// 소비 차트 JSON 구조
 interface SpendByCategory {
   category: string;
   amount: number;
 }
 
 interface SpendChartJson {
-  period: string;
-  total_spend: number;
-  by_category: SpendByCategory[];
+  period?: string;
+  total_spend?: number;
+  by_category?: SpendByCategory[];
 }
 
-// 새 JSON 구조에 맞는 타입들
+// 소비 요약 JSON 구조
 interface ConsumeAnalysisSummary {
-  total_spend: number;
-  risk_message: string;
-  recommendation: string;
-  main_categories: string[];
+  total_spend?: number;
+  risk_message?: string;
+  recommendation?: string;
+  main_categories?: string[];
 }
 
+// 정책 변경 JSON 구조
 interface PolicyChange {
-  change_summary: string;
-  effective_date: string;
+  change_summary?: string;
+  effective_date?: string;
 }
 
-// FastAPI의 ReportRead 스키마와 맞춘 타입 (신규 키 기준)
+// FastAPI ReportRead 에 맞춘 타입
 interface ReportDto {
   report_id: number;
   user_id: number;
   create_at: string;
 
-  // 1) 소비 관련
+  // 텍스트 컬럼
   consume_report: string | null;
   cluster_nickname: string | null;
-  consume_analysis_summary: ConsumeAnalysisSummary | null;
-
-  // 2) 프로필(소득/부채) 변화
   change_analysis_report: string | null;
-  change_raw_changes: string[] | null;
-
-  // 3) 투자 수익 분석
   profit_analysis_report: string | null;
-  net_profit: number | null;
-  profit_rate: number | null;
-
-  // 4) 정책/환경 변화
   policy_analysis_report: string | null;
-  policy_changes: PolicyChange[] | null;
-
-  // 5) 요약
   threelines_summary: string | null;
-
-  // (선택) 기존에 설계했던 전체 요약 컬럼이 있다면
   summarize?: string | null;
 
-  // (선택) 소비 차트용 JSON 컬럼이 있다면
-  spend_chart_json?: SpendChartJson | null;
+  // JSON / 숫자 컬럼들 (여러 형태를 받을 수 있게 any 허용)
+  consume_analysis_summary?: ConsumeAnalysisSummary | string | null;
+  spend_chart_json?: SpendChartJson | string | null;
+  change_raw_changes?: string[] | string | null;
+  policy_changes?: PolicyChange[] | string | null;
+  net_profit?: number | null;
+  profit_rate?: number | null;
 }
 
 // ----------------------------------------------------
-// 2. 리포트 카드 컴포넌트 (목록용)
+// 1-1. JSON 파싱 유틸 (string / object 둘 다 처리)
+// ----------------------------------------------------
+function parseJsonField<T>(value: any): T | null {
+  if (value == null) return null;
+
+  if (typeof value === "object") {
+    return value as T;
+  }
+
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+    try {
+      return JSON.parse(trimmed) as T;
+    } catch (e) {
+      console.error("JSON 필드 파싱 실패:", value, e);
+      return null;
+    }
+  }
+
+  return null;
+}
+
+// ----------------------------------------------------
+// 2. 공통 블록 컴포넌트
+// ----------------------------------------------------
+const AnalysisBlock: React.FC<{
+  title: string;
+  children: React.ReactNode;
+}> = ({ title, children }) => {
+  return (
+    <Box
+      sx={{
+        p: 3,
+        borderRadius: 1,
+        bgcolor: "background.paper",
+        border: 1,
+        borderColor: "divider",
+        minHeight: 80,
+      }}
+    >
+      <Typography
+        variant="h6"
+        fontWeight={600}
+        mb={1}
+        sx={{ color: "text.primary" }}
+      >
+        {title}
+      </Typography>
+      {children}
+    </Box>
+  );
+};
+
+// ----------------------------------------------------
+// 3. 파이 차트 컴포넌트
+// ----------------------------------------------------
+const SpendPieChart: React.FC<{ data: SpendChartJson }> = ({ data }) => {
+  const items = Array.isArray(data.by_category) ? data.by_category : [];
+  if (items.length === 0) {
+    return (
+      <Typography variant="body2" color="text.secondary">
+        소비 그래프 데이터가 아직 없습니다.
+      </Typography>
+    );
+  }
+
+  const chartData = items.map((item) => ({
+    name: item.category,
+    value: item.amount,
+  }));
+
+  const COLORS = ["#0074E9", "#00C49F", "#FFBB28", "#FF8042", "#8884D8"];
+
+  return (
+    <Box sx={{ width: "100%", height: 280 }}>
+      <ResponsiveContainer>
+        <PieChart>
+          <Pie
+            data={chartData}
+            dataKey="value"
+            nameKey="name"
+            cx="50%"
+            cy="50%"
+            outerRadius={120}
+            label
+          >
+            {chartData.map((entry, index) => (
+              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+            ))}
+          </Pie>
+          <Tooltip
+            formatter={(v: any) => `${Number(v).toLocaleString()} 원`}
+          />
+          <Legend />
+        </PieChart>
+      </ResponsiveContainer>
+    </Box>
+  );
+};
+
+// ----------------------------------------------------
+// 4. 리포트 카드 컴포넌트 (목록용)
 // ----------------------------------------------------
 interface ReportCardProps {
   report: ReportDto;
@@ -120,7 +212,7 @@ const ReportCard: React.FC<ReportCardProps> = ({ report, onView }) => {
           <Typography
             variant="subtitle1"
             fontWeight={700}
-            color="#0074E9" // 브랜드 컬러는 그대로 사용
+            color="#0074E9"
             sx={{ textDecoration: "underline" }}
           >
             {createdDate.getFullYear()}년 {createdDate.getMonth() + 1}월 통합 리포트
@@ -155,93 +247,7 @@ const ReportCard: React.FC<ReportCardProps> = ({ report, onView }) => {
 };
 
 // ----------------------------------------------------
-// 3. 공통 블록 컴포넌트
-// ----------------------------------------------------
-const AnalysisBlock: React.FC<{
-  title: string;
-  content: string | React.ReactNode | null;
-}> = ({ title, content }) => {
-  if (!content) return null;
-
-  return (
-    <Box
-      sx={{
-        p: 3,
-        borderRadius: 1,
-        bgcolor: "background.paper",
-        border: 1,
-        borderColor: "divider",
-        minHeight: 80,
-      }}
-    >
-      <Typography
-        variant="h6"
-        fontWeight={600}
-        mb={1}
-        sx={{ color: "text.primary" }}
-      >
-        {title}
-      </Typography>
-      {typeof content === "string" ? (
-        <Typography
-          variant="body1"
-          sx={{
-            color: "text.primary",
-            lineHeight: 1.8,
-            whiteSpace: "pre-wrap",
-          }}
-        >
-          {content}
-        </Typography>
-      ) : (
-        content
-      )}
-    </Box>
-  );
-};
-
-// ----------------------------------------------------
-// 4. 소비 파이 차트 컴포넌트 (있으면 사용, 없으면 자동으로 숨김)
-// ----------------------------------------------------
-const SpendPieChart: React.FC<{ data: SpendChartJson }> = ({ data }) => {
-  const chartData = data.by_category.map((item) => ({
-    name: item.category,
-    value: item.amount,
-  }));
-
-  const COLORS = ["#0074E9", "#00C49F", "#FFBB28", "#FF8042", "#8884D8"];
-
-  return (
-    <Box sx={{ width: "100%", height: 480 }}>
-      <ResponsiveContainer>
-        <PieChart>
-          <Pie
-            data={chartData}
-            dataKey="value"
-            nameKey="name"
-            cx="50%"
-            cy="50%"
-            outerRadius={125}
-            label
-          >
-            {chartData.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-            ))}
-          </Pie>
-          <Tooltip
-            formatter={(value: any) =>
-              `${Number(value).toLocaleString()} 원`
-            }
-          />
-          <Legend />
-        </PieChart>
-      </ResponsiveContainer>
-    </Box>
-  );
-};
-
-// ----------------------------------------------------
-// 5. 리포트 상세 뷰
+// 5. 상세 보기
 // ----------------------------------------------------
 interface ReportDetailViewProps {
   report: ReportDto;
@@ -253,7 +259,34 @@ const ReportDetailView: React.FC<ReportDetailViewProps> = ({
   onBack,
 }) => {
   const createdDate = new Date(report.create_at);
-  const hasChart = !!report.spend_chart_json;
+
+  // JSON 필드 파싱
+  const spendChart = parseJsonField<SpendChartJson>(
+    report.spend_chart_json as any
+  ) || {};
+  const consumeSummary = parseJsonField<ConsumeAnalysisSummary>(
+    report.consume_analysis_summary as any
+  );
+  const rawChanges = parseJsonField<string[]>(report.change_raw_changes as any);
+  const policyChanges = parseJsonField<PolicyChange[]>(
+    report.policy_changes as any
+  );
+
+  const hasCategories =
+    Array.isArray(spendChart.by_category) &&
+    spendChart.by_category.length > 0;
+
+  const hasNetProfit = typeof report.net_profit === "number";
+  const hasProfitRate = typeof report.profit_rate === "number";
+
+  const hasConsumeText =
+    !!report.consume_report ||
+    !!(consumeSummary &&
+      (typeof consumeSummary.total_spend === "number" ||
+        consumeSummary.risk_message ||
+        consumeSummary.recommendation ||
+        (consumeSummary.main_categories &&
+          consumeSummary.main_categories.length > 0)));
 
   return (
     <Box
@@ -285,7 +318,7 @@ const ReportDetailView: React.FC<ReportDetailViewProps> = ({
       {/* 상단 제목/메타 정보 */}
       <Stack direction="row" alignItems="center" spacing={2} mb={1}>
         <Typography variant="h5" fontWeight={600} color="text.primary">
-          {createdDate.getFullYear()}년 {createdDate.getMonth() + 1}월 상세 통합 분석 보고서
+          {createdDate.getFullYear()}년 {createdDate.getMonth() + 1}월 상세 통합 리포트
         </Typography>
         {report.cluster_nickname && (
           <Chip
@@ -301,239 +334,255 @@ const ReportDetailView: React.FC<ReportDetailViewProps> = ({
 
       <Typography variant="body2" mb={3} color="text.secondary">
         생성일: {createdDate.toLocaleString()}
-        {/* user_id는 화면에 노출하지 않음 */}
       </Typography>
 
-      {/* ================= 상단 영역 ================= */}
+      {/* ================= 상단 영역: 소비 관련 3개 카드 ================= */}
       <Box
         sx={{
           display: "grid",
           gridTemplateColumns: {
             xs: "1fr",
-            md: hasChart ? "3fr 3fr 6fr" : "1fr",
-            lg: hasChart ? "4fr 4fr 7fr" : "1fr",
+            md: "repeat(3, 1fr)", // ✅ 데스크탑에서는 3등분
           },
-          gridAutoRows: "minmax(0, auto)",
           columnGap: 3,
           rowGap: 3,
           mb: 4,
           alignItems: "stretch",
         }}
       >
-        {hasChart && report.spend_chart_json && (
-          <>
-            {/* 파이 차트 */}
-            <Box sx={{ gridColumn: { xs: "1", md: "1" }, gridRow: "1" }}>
-              <AnalysisBlock
-                title="소비 그래프 (파이 차트)"
-                content={<SpendPieChart data={report.spend_chart_json} />}
-              />
-            </Box>
+        {/* 1) 소비 그래프 (파이 차트) */}
+        <AnalysisBlock title="소비 그래프 (파이 차트)">
+          {hasCategories ? (
+            <SpendPieChart data={spendChart} />
+          ) : (
+            <Typography variant="body2" color="text.secondary">
+              아직 등록된 소비 그래프 데이터가 없습니다.
+            </Typography>
+          )}
+        </AnalysisBlock>
 
-            {/* JSON 데이터 */}
-            <Box sx={{ gridColumn: { xs: "1", md: "2" }, gridRow: "1" }}>
-              <AnalysisBlock
-                title="소비 그래프 데이터 (JSON)"
-                content={
-                  <Typography
-                    variant="body2"
-                    sx={{
-                      color: "text.secondary",
-                      whiteSpace: "pre-wrap",
-                      fontFamily: "monospace",
-                    }}
-                  >
-                    {JSON.stringify(report.spend_chart_json, null, 2)}
-                  </Typography>
-                }
-              />
-            </Box>
-          </>
-        )}
+        {/* 2) 소비 그래프 데이터 (카테고리 요약) */}
+        <AnalysisBlock title="소비 그래프 데이터">
+          {hasCategories ? (
+            <>
+              {spendChart.by_category!.map((item, idx) => (
+                <Typography
+                  key={idx}
+                  variant="body2"
+                  sx={{ lineHeight: 1.8 }}
+                >
+                  • {item.category}:{" "}
+                  {Number(item.amount).toLocaleString()} 원
+                </Typography>
+              ))}
 
-        {/* 소비 분석: 오른쪽에서 파이+JSON 합친 높이만큼 차지 */}
-        <Box
-          sx={{
-            gridColumn: {
-              xs: "1",
-              md: hasChart ? "3" : "1",
-            },
-            gridRow: hasChart ? "1 / span 2" : "1",
-            height: "100%",
-          }}
-        >
-          <AnalysisBlock
-            title="소비 분석 요약"
-            content={
-              <>
-                {report.consume_report && (
-                  <Typography
-                    variant="body1"
-                    sx={{
-                      color: "text.primary",
-                      lineHeight: 1.8,
-                      whiteSpace: "pre-wrap",
-                      mb: 1.5,
-                    }}
-                  >
-                    {report.consume_report}
-                  </Typography>
-                )}
+              {typeof spendChart.total_spend === "number" && (
+                <Typography
+                  variant="body2"
+                  sx={{ mt: 1.5, fontWeight: 600 }}
+                >
+                  총 지출:{" "}
+                  {spendChart.total_spend.toLocaleString()} 원
+                </Typography>
+              )}
+            </>
+          ) : (
+            <Typography variant="body2" color="text.secondary">
+              소비 카테고리별 데이터가 아직 없습니다.
+            </Typography>
+          )}
+        </AnalysisBlock>
 
-                {report.consume_analysis_summary && (
-                  <Box sx={{ mt: 1.5 }}>
+        {/* 3) 소비 분석 */}
+        <AnalysisBlock title="소비 분석">
+          {hasConsumeText ? (
+            <>
+              {report.consume_report && (
+                <Typography
+                  variant="body1"
+                  sx={{
+                    color: "text.primary",
+                    lineHeight: 1.8,
+                    whiteSpace: "pre-wrap",
+                    mb: 1.5,
+                  }}
+                >
+                  {report.consume_report}
+                </Typography>
+              )}
+
+              {consumeSummary && (
+                <Box sx={{ mt: 0.5 }}>
+                  {typeof consumeSummary.total_spend === "number" && (
                     <Typography variant="body2" sx={{ mb: 0.5 }}>
                       • 월 총 지출:{" "}
-                      {report.consume_analysis_summary.total_spend.toLocaleString()}{" "}
-                      원
+                      {consumeSummary.total_spend.toLocaleString()} 원
                     </Typography>
+                  )}
+                  {consumeSummary.risk_message && (
                     <Typography variant="body2" sx={{ mb: 0.5 }}>
-                      • 위험 메시지:{" "}
-                      {report.consume_analysis_summary.risk_message}
+                      • 위험 메시지: {consumeSummary.risk_message}
                     </Typography>
+                  )}
+                  {consumeSummary.recommendation && (
                     <Typography variant="body2" sx={{ mb: 0.5 }}>
-                      • 권장 사항:{" "}
-                      {report.consume_analysis_summary.recommendation}
+                      • 권장 사항: {consumeSummary.recommendation}
                     </Typography>
-                    {report.consume_analysis_summary.main_categories &&
-                      report.consume_analysis_summary.main_categories.length >
-                        0 && (
-                        <Typography variant="body2" sx={{ mt: 0.5 }}>
-                          • 주요 카테고리:{" "}
-                          {report.consume_analysis_summary.main_categories.join(
-                            ", "
-                          )}
-                        </Typography>
-                      )}
-                  </Box>
-                )}
-              </>
-            }
-          />
-        </Box>
+                  )}
+                  {consumeSummary.main_categories &&
+                    consumeSummary.main_categories.length > 0 && (
+                      <Typography variant="body2" sx={{ mt: 0.5 }}>
+                        • 주요 카테고리:{" "}
+                        {consumeSummary.main_categories.join(", ")}
+                      </Typography>
+                    )}
+                </Box>
+              )}
+            </>
+          ) : (
+            <Typography variant="body2" color="text.secondary">
+              아직 생성된 소비 분석 결과가 없습니다.
+            </Typography>
+          )}
+        </AnalysisBlock>
       </Box>
 
       {/* ================= 하단 영역 ================= */}
       <Stack spacing={3}>
-        {/* 소득/부채 변화 */}
-        <AnalysisBlock
-          title="사용자 정보 변화 (소득·부채)"
-          content={
-            report.change_analysis_report || report.change_raw_changes ? (
-              <>
-                {report.change_analysis_report && (
-                  <Typography
-                    variant="body1"
-                    sx={{ mb: 1.5, whiteSpace: "pre-wrap" }}
-                  >
-                    {report.change_analysis_report}
-                  </Typography>
-                )}
-                {report.change_raw_changes &&
-                  report.change_raw_changes.length > 0 && (
-                    <Box component="ul" sx={{ pl: 2, m: 0 }}>
-                      {report.change_raw_changes.map((item, idx) => (
-                        <Typography
-                          key={idx}
-                          component="li"
-                          variant="body2"
-                          sx={{ lineHeight: 1.8 }}
-                        >
-                          {item}
-                        </Typography>
-                      ))}
-                    </Box>
-                  )}
-              </>
-            ) : null
-          }
-        />
+        {/* 소득·부채 변화 */}
+        <AnalysisBlock title="소득·부채 변화">
+          {report.change_analysis_report ? (
+            <Typography
+              variant="body1"
+              sx={{ mb: 1.5, whiteSpace: "pre-wrap", lineHeight: 1.8 }}
+            >
+              {report.change_analysis_report}
+            </Typography>
+          ) : (
+            <Typography variant="body2" color="text.secondary">
+              소득·부채 변화 분석 결과가 아직 없습니다.
+            </Typography>
+          )}
+
+          {rawChanges && rawChanges.length > 0 && (
+            <Box component="ul" sx={{ pl: 2, m: 0 }}>
+              {rawChanges.map((item, idx) => (
+                <Typography
+                  key={idx}
+                  component="li"
+                  variant="body2"
+                  sx={{ lineHeight: 1.8 }}
+                >
+                  {item}
+                </Typography>
+              ))}
+            </Box>
+          )}
+        </AnalysisBlock>
 
         {/* 투자 수익 분석 */}
-        <AnalysisBlock
-          title="투자 수익 분석"
-          content={
-            report.profit_analysis_report ||
-            report.net_profit != null ||
-            report.profit_rate != null ? (
-              <>
-                {report.profit_analysis_report && (
-                  <Typography
-                    variant="body1"
-                    sx={{ mb: 1.5, whiteSpace: "pre-wrap" }}
-                  >
-                    {report.profit_analysis_report}
-                  </Typography>
-                )}
-                <Stack direction="row" spacing={4}>
-                  {report.net_profit != null && (
-                    <Typography variant="body2">
-                      • 순이익: {report.net_profit.toLocaleString()} 원
-                    </Typography>
-                  )}
-                  {report.profit_rate != null && (
-                    <Typography variant="body2">
-                      • 수익률: {(report.profit_rate * 100).toFixed(2)}%
-                    </Typography>
-                  )}
-                </Stack>
-              </>
-            ) : null
-          }
-        />
+        <AnalysisBlock title="투자 수익 분석">
+          {report.profit_analysis_report ? (
+            <Typography
+              variant="body1"
+              sx={{ mb: 1.5, whiteSpace: "pre-wrap", lineHeight: 1.8 }}
+            >
+              {report.profit_analysis_report}
+            </Typography>
+          ) : (
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+              아직 생성된 투자 수익 분석 결과가 없습니다.
+            </Typography>
+          )}
+
+          {(hasNetProfit || hasProfitRate) && (
+            <Stack direction="row" spacing={4}>
+              {hasNetProfit && (
+                <Typography variant="body2">
+                  • 순이익: {report.net_profit!.toLocaleString()} 원
+                </Typography>
+              )}
+              {hasProfitRate && (
+                <Typography variant="body2">
+                  • 수익률: {(report.profit_rate! * 100).toFixed(2)}%
+                </Typography>
+              )}
+            </Stack>
+          )}
+        </AnalysisBlock>
 
         {/* 정책 및 환경 변동 사항 */}
-        <AnalysisBlock
-          title="정책 및 환경 변동 사항"
-          content={
-            report.policy_analysis_report || report.policy_changes ? (
-              <>
-                {report.policy_analysis_report && (
-                  <Typography
-                    variant="body1"
-                    sx={{ mb: 1.5, whiteSpace: "pre-wrap" }}
-                  >
-                    {report.policy_analysis_report}
-                  </Typography>
-                )}
-                {report.policy_changes && report.policy_changes.length > 0 && (
-                  <Box component="ul" sx={{ pl: 2, m: 0 }}>
-                    {report.policy_changes.map((pc, idx) => (
-                      <Typography
-                        key={idx}
-                        component="li"
-                        variant="body2"
-                        sx={{ lineHeight: 1.8 }}
-                      >
-                        [{pc.effective_date}] {pc.change_summary}
-                      </Typography>
-                    ))}
-                  </Box>
-                )}
-              </>
-            ) : null
-          }
-        />
+        <AnalysisBlock title="정책 및 환경 변동 사항">
+          {report.policy_analysis_report ? (
+            <Typography
+              variant="body1"
+              sx={{ mb: 1.5, whiteSpace: "pre-wrap", lineHeight: 1.8 }}
+            >
+              {report.policy_analysis_report}
+            </Typography>
+          ) : (
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+              아직 등록된 정책 및 환경 변동 사항이 없습니다.
+            </Typography>
+          )}
+
+          {policyChanges && policyChanges.length > 0 && (
+            <Box component="ul" sx={{ pl: 2, m: 0 }}>
+              {policyChanges.map((pc, idx) => (
+                <Typography
+                  key={idx}
+                  component="li"
+                  variant="body2"
+                  sx={{ lineHeight: 1.8 }}
+                >
+                  {pc.effective_date ? `[${pc.effective_date}] ` : ""}
+                  {pc.change_summary}
+                </Typography>
+              ))}
+            </Box>
+          )}
+        </AnalysisBlock>
 
         {/* 3줄 요약 */}
-        <AnalysisBlock
-          title="3줄 요약"
-          content={report.threelines_summary}
-        />
+        <AnalysisBlock title="3줄 요약">
+          {report.threelines_summary ? (
+            <Typography
+              variant="body1"
+              sx={{ whiteSpace: "pre-wrap", lineHeight: 1.8 }}
+            >
+              {report.threelines_summary}
+            </Typography>
+          ) : (
+            <Typography variant="body2" color="text.secondary">
+              아직 3줄 요약이 생성되지 않았습니다.
+            </Typography>
+          )}
+        </AnalysisBlock>
 
-        {/* 전체 통합 보고서 (summarize 컬럼이 있을 경우만) */}
-        <AnalysisBlock
-          title="전체 통합 보고서 (summarize)"
-          content={report.summarize ?? null}
-        />
+        {/* 전체 통합 보고서 */}
+        <AnalysisBlock title="전체 통합 보고서">
+          {report.summarize ? (
+            <Typography
+              variant="body1"
+              sx={{ whiteSpace: "pre-wrap", lineHeight: 1.8 }}
+            >
+              {report.summarize}
+            </Typography>
+          ) : (
+            <Typography variant="body2" color="text.secondary">
+              아직 전체 통합 보고서가 생성되지 않았습니다.
+            </Typography>
+          )}
+        </AnalysisBlock>
       </Stack>
     </Box>
   );
 };
 
 // ----------------------------------------------------
-// 6. 메인 Reports 컴포넌트 (목록 화면)
+// 6. 메인 Reports 컴포넌트 (목록 + 상세 전환)
 // ----------------------------------------------------
+
 export default function Reports() {
   const { accessToken } = useAuth();
   const [reports, setReports] = React.useState<ReportDto[]>([]);
@@ -544,16 +593,24 @@ export default function Reports() {
 
   React.useEffect(() => {
     const fetchReports = async () => {
+      if (!accessToken) {
+        setLoading(false);
+        return;
+      }
+
       setLoading(true);
       setError(null);
       try {
         const res = await axios.get<ReportDto[]>(API_URL, {
           timeout: 15000,
-          headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            Accept: "application/json",
+          },
         });
         setReports(res.data);
       } catch (err: any) {
-        console.error(err);
+        console.error("리포트 목록 조회 실패:", err?.response ?? err);
         setError("리포트 목록을 불러오는 중 오류가 발생했습니다.");
       } finally {
         setLoading(false);
@@ -561,22 +618,23 @@ export default function Reports() {
     };
 
     fetchReports();
-  }, []);
+  }, [accessToken]);
 
   const handleViewReport = (report: ReportDto) => {
-    setSelectedReport(report);
+    setSelectedReport(report); // ✅ 추가 API 없이 상세 보기
   };
 
   const handleBack = () => {
     setSelectedReport(null);
+    setError(null);
   };
 
-  // 상세 보기 모드
+  // ✅ 상세 보기 모드
   if (selectedReport) {
     return <ReportDetailView report={selectedReport} onBack={handleBack} />;
   }
 
-  // 목록 보기 모드
+  // ✅ 목록 보기 모드
   return (
     <Box
       sx={{
@@ -623,7 +681,7 @@ export default function Reports() {
 
       {loading && (
         <Box sx={{ p: 3 }}>
-          <Typography>리포트 목록을 불러오는 중입니다...</Typography>
+          <Typography>리포트 데이터를 불러오는 중입니다...</Typography>
         </Box>
       )}
 

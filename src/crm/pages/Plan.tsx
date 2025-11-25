@@ -108,7 +108,7 @@ export default function Plan() {
 
     try {
       // 백엔드 API 호출
-      const response = await fetch(`${API_BASE_URL}/chat`, {
+      const response = await fetch(`${API_BASE_URL}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
