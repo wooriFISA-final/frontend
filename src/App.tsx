@@ -1,12 +1,11 @@
 // App.tsx
-import React from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./auth/AuthContext";
 import { PrivateRoute } from "./auth/PrivateRoute";
 import MarketingPage from "./marketing-page/MarketingPage";
 import CrmDashboard from "./crm/CrmDashboard";
 import AuthPage from "./auth/AuthPage.tsx";
-import MyProfile from "./crm/pages/MyProfile"; // (지금은 안 쓰이지만 남겨둠)
+// import MyProfile from "./crm/pages/MyProfile"; // (지금은 안 쓰이지만 남겨둠)
 import { SearchProvider } from "./search/SearchContext";
 
 export default function App() {

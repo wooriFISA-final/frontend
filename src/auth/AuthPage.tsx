@@ -41,8 +41,8 @@ export default function AuthPage() {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
         body: new URLSearchParams({
-            username: email,
-            password: password,
+          username: email,
+          password: password,
         }),
       });
 
@@ -76,7 +76,7 @@ export default function AuthPage() {
           WOORI-ZIP
         </Typography>
 
-        <Tabs value={tab} onChange={(e, v) => setTab(v)} sx={{ mb: 3 }}>
+        <Tabs value={tab} onChange={(_e, v) => setTab(v)} sx={{ mb: 3 }}>
           <Tab label="로그인" />
           <Tab label="회원가입" />
         </Tabs>

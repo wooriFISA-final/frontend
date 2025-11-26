@@ -1,5 +1,4 @@
 // src/crm/components/ChatMessageBubble.tsx
-import * as React from "react";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import Avatar from "@mui/material/Avatar";

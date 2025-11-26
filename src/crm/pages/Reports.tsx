@@ -26,10 +26,10 @@ import {
 // 1. API 설정 + 타입 정의 (최신 백엔드 구조 반영)
 // ----------------------------------------------------
 
-const API_URL = "http://localhost:8000/reports/"; 
+const API_URL = "http://localhost:8000/reports/";
 
 // [차트 데이터 타입]: Backend에서 JSON 문자열로 저장하는 배열 구조
-interface ChartDataArray { 
+interface ChartDataArray {
   category: string;
   amount: number;
 }
@@ -67,12 +67,12 @@ interface ReportDto {
   summarize?: string | null;
 
   // JSON / 숫자 컬럼들 (string | object로 유연하게 받음)
-  consume_analysis_summary?: NewConsumeAnalysisSummary | string | null; 
-  spend_chart_json?: SpendChartJsonType | string | null; 
+  consume_analysis_summary?: NewConsumeAnalysisSummary | string | null;
+  spend_chart_json?: SpendChartJsonType | string | null;
   change_raw_changes?: string[] | string | null;
   policy_changes?: PolicyChange[] | string | null;
   net_profit?: number | null;
-  profit_rate?: number | null; 
+  profit_rate?: number | null;
 }
 
 // ----------------------------------------------------
@@ -88,10 +88,10 @@ function parseJsonField<T>(value: any): T | null {
   // 이미 객체(Object)이거나 배열(Array)인 경우
   if (typeof value === "object") {
     if (Array.isArray(value) && value.length > 0) {
-        return value as T;
+      return value as T;
     }
     if (!Array.isArray(value) && Object.keys(value).length === 0) {
-        return null; 
+      return null;
     }
     return value as T;
   }
@@ -175,7 +175,7 @@ const SpendPieChart: React.FC<{ data: ChartDataArray[] }> = ({ data }) => {
             outerRadius={120}
             label
           >
-            {chartData.map((entry, index) => (
+            {chartData.map((_entry, index) => (
               <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
             ))}
           </Pie>
@@ -605,9 +605,9 @@ export default function Reports() {
       console.log("--- 리포트 목록 조회 시작 ---");
       console.log(`API_URL: ${API_URL}`);
       console.log(`Access Token 존재 여부: ${!!accessToken}`);
-      
+
       // Mock Auth 사용 시 토큰 체크는 생략
-      if (!accessToken) { 
+      if (!accessToken) {
         setLoading(false);
         // return; // 실제 사용 시 주석 해제 필요
       }
@@ -617,11 +617,11 @@ export default function Reports() {
       try {
         // 🚨 2. 요청 헤더 정보 로깅
         const headers = {
-            Authorization: `Bearer ${accessToken}`, 
-            Accept: "application/json",
+          Authorization: `Bearer ${accessToken}`,
+          Accept: "application/json",
         };
         console.log("요청 헤더:", headers);
-        
+
         const res = await axios.get<ReportDto[]>(API_URL, {
           timeout: 35000,
           headers: headers, // 로깅된 헤더 사용
@@ -633,22 +633,22 @@ export default function Reports() {
       } catch (err: any) {
         // 🚨 4. 요청 실패 시 상세 오류 정보 로깅
         console.error("--- 리포트 목록 조회 실패 상세 ---");
-        
+
         if (err.response) {
-            // HTTP 상태 코드가 2xx 범위를 벗어난 경우 (예: 404, 500)
-            console.error("응답 오류 상태 코드:", err.response.status);
-            console.error("응답 데이터:", err.response.data);
-            setError(`[HTTP Error ${err.response.status}] 리포트 목록을 불러오는 중 오류가 발생했습니다. (백엔드 확인 필요)`);
+          // HTTP 상태 코드가 2xx 범위를 벗어난 경우 (예: 404, 500)
+          console.error("응답 오류 상태 코드:", err.response.status);
+          console.error("응답 데이터:", err.response.data);
+          setError(`[HTTP Error ${err.response.status}] 리포트 목록을 불러오는 중 오류가 발생했습니다. (백엔드 확인 필요)`);
         } else if (err.request) {
-            // 요청이 만들어졌으나 응답을 받지 못한 경우 (예: 네트워크 오류, CORS 문제, 백엔드 서버 다운)
-            console.error("요청 오류: 응답을 받지 못함. 서버 또는 네트워크 상태 확인 필요.");
-            setError("네트워크 오류 또는 서버 응답 없음. 서버가 실행 중인지 확인하세요.");
+          // 요청이 만들어졌으나 응답을 받지 못한 경우 (예: 네트워크 오류, CORS 문제, 백엔드 서버 다운)
+          console.error("요청 오류: 응답을 받지 못함. 서버 또는 네트워크 상태 확인 필요.");
+          setError("네트워크 오류 또는 서버 응답 없음. 서버가 실행 중인지 확인하세요.");
         } else {
-            // 요청 설정 중 오류가 발생한 경우
-            console.error("Axios 설정 오류:", err.message);
-            setError(`클라이언트 오류: ${err.message}`);
+          // 요청 설정 중 오류가 발생한 경우
+          console.error("Axios 설정 오류:", err.message);
+          setError(`클라이언트 오류: ${err.message}`);
         }
-        
+
         // 원본 콘솔 출력도 유지
         console.error("원본 오류 객체:", err);
       } finally {

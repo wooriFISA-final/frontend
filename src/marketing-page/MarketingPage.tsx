@@ -1,11 +1,10 @@
 // src/marketing-page/MarketingPage.tsx
-import React from "react";
-import { useAuth } from "../auth/useAuth";
+// import { useAuth } from "../auth/useAuth";
 import { useNavigate } from "react-router-dom";
 import { Box, Button, Typography } from "@mui/material";
 
 export default function MarketingPage() {
-  const { login } = useAuth();
+  // const { login } = useAuth();
   const navigate = useNavigate();
 
   return (

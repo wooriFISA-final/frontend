@@ -1,4 +1,3 @@
-import * as React from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import Box from "@mui/material/Box";
 import Drawer from "@mui/material/Drawer";

@@ -60,13 +60,13 @@ export default function ChatInputArea({
     >
       <Paper
         elevation={0}
-        sx={(theme) => ({
+        sx={{
           width: "100%",
           borderRadius: 2,
           p: 1.5,
           bgcolor: "background.paper",
           boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
-        })}
+        }}
       >
         {/* 추천 프롬프트 */}
         {suggestedPrompts.length > 0 && (

@@ -1,5 +1,5 @@
 import * as React from "react";
-import { useTheme } from "@mui/material/styles";
+
 import Box from "@mui/material/Box";
 import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
@@ -10,11 +10,10 @@ import ToggleButton from "@mui/material/ToggleButton";
 import { BarChart } from "@mui/x-charts/BarChart";
 
 export default function CrmSalesChart() {
-  const theme = useTheme();
   const [timeRange, setTimeRange] = React.useState("year");
 
   const handleTimeRangeChange = (
-    event: React.MouseEvent<HTMLElement>,
+    _event: React.MouseEvent<HTMLElement>,
     newTimeRange: string | null,
   ) => {
     if (newTimeRange !== null) {
@@ -22,8 +21,7 @@ export default function CrmSalesChart() {
     }
   };
 
-  // Generate monthly data
-  const currentYear = new Date().getFullYear();
+
   const monthNames = [
     "Jan",
     "Feb",
@@ -68,7 +66,7 @@ export default function CrmSalesChart() {
     data: monthNames,
     tickLabelStyle: {
       angle: 0,
-      textAnchor: "middle",
+      textAnchor: "middle" as const,
       fontSize: 12,
     },
   };
@@ -162,7 +160,7 @@ export default function CrmSalesChart() {
             margin={{ top: 10, bottom: 30, left: 60, right: 10 }}
             slotProps={{
               legend: {
-                position: { vertical: "top", horizontal: "middle" },
+                position: { vertical: "top", horizontal: "center" },
               },
             }}
           />

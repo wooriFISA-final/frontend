@@ -12,7 +12,7 @@ export default function CrmCustomerDistributionMap() {
   const theme = useTheme();
   const [mapView, setMapView] = React.useState("customers");
 
-  const handleChange = (event: React.SyntheticEvent, newValue: string) => {
+  const handleChange = (_event: React.SyntheticEvent, newValue: string) => {
     setMapView(newValue);
   };
 

@@ -1,5 +1,4 @@
 // src/crm/components/ChatSidebar.tsx
-import * as React from "react";
 import Box from "@mui/material/Box";
 import Stack from "@mui/material/Stack";
 import Paper from "@mui/material/Paper";
@@ -40,7 +39,6 @@ export default function ChatSidebar({
   conversationHistory = [],
   onNewChat,
   onSelectConversation,
-  onDeleteConversation,
   activeConversationId,
 }: ChatSidebarProps) {
   const theme = useTheme();
