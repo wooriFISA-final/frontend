@@ -23,38 +23,35 @@ import {
 } from "recharts";
 
 // ----------------------------------------------------
-// 1. API 설정 + 타입 정의
+// 1. API 설정 + 타입 정의 (최신 백엔드 구조 반영)
 // ----------------------------------------------------
 
-const API_URL = "http://localhost:8000/reports";
+const API_URL = "http://localhost:8000/reports/"; 
 
-// 소비 차트 JSON 구조
-interface SpendByCategory {
+// [차트 데이터 타입]: Backend에서 JSON 문자열로 저장하는 배열 구조
+interface ChartDataArray { 
   category: string;
   amount: number;
 }
 
-interface SpendChartJson {
-  period?: string;
-  total_spend?: number;
-  by_category?: SpendByCategory[];
+// [차트 JSON 통합 타입]: DB에 저장되는 JSON 문자열의 배열 구조를 가정
+type SpendChartJsonType = ChartDataArray[];
+
+// [소비 요약 JSON 구조]: 최신 백엔드 키 반영
+interface NewConsumeAnalysisSummary {
+  latest_total_spend: string; // "5,400,000"
+  total_change_diff: string; // "+600,000원 (12.50%) 변동"
+  top_5_categories: string[]; // Top 5 카테고리 리스트
+  member_info: any;
 }
 
-// 소비 요약 JSON 구조
-interface ConsumeAnalysisSummary {
-  total_spend?: number;
-  risk_message?: string;
-  recommendation?: string;
-  main_categories?: string[];
-}
-
-// 정책 변경 JSON 구조
+// [정책 변경 JSON 구조]
 interface PolicyChange {
-  change_summary?: string;
-  effective_date?: string;
+  change_summary: string;
+  effective_date: string;
 }
 
-// FastAPI ReportRead 에 맞춘 타입
+// FastAPI ReportRead 에 맞춘 타입 (JSON 필드는 string | object로 유연하게 받음)
 interface ReportDto {
   report_id: number;
   user_id: number;
@@ -69,28 +66,40 @@ interface ReportDto {
   threelines_summary: string | null;
   summarize?: string | null;
 
-  // JSON / 숫자 컬럼들 (여러 형태를 받을 수 있게 any 허용)
-  consume_analysis_summary?: ConsumeAnalysisSummary | string | null;
-  spend_chart_json?: SpendChartJson | string | null;
+  // JSON / 숫자 컬럼들 (string | object로 유연하게 받음)
+  consume_analysis_summary?: NewConsumeAnalysisSummary | string | null; 
+  spend_chart_json?: SpendChartJsonType | string | null; 
   change_raw_changes?: string[] | string | null;
   policy_changes?: PolicyChange[] | string | null;
   net_profit?: number | null;
-  profit_rate?: number | null;
+  profit_rate?: number | null; 
 }
 
 // ----------------------------------------------------
 // 1-1. JSON 파싱 유틸 (string / object 둘 다 처리)
 // ----------------------------------------------------
+/**
+ * JSON 필드(DB에서 string 또는 object 형태로 넘어올 수 있음)를
+ * 원하는 타입으로 안전하게 파싱합니다.
+ */
 function parseJsonField<T>(value: any): T | null {
   if (value == null) return null;
 
+  // 이미 객체(Object)이거나 배열(Array)인 경우
   if (typeof value === "object") {
+    if (Array.isArray(value) && value.length > 0) {
+        return value as T;
+    }
+    if (!Array.isArray(value) && Object.keys(value).length === 0) {
+        return null; 
+    }
     return value as T;
   }
 
+  // 문자열(string)인 경우
   if (typeof value === "string") {
     const trimmed = value.trim();
-    if (!trimmed) return null;
+    if (!trimmed || trimmed === '{}' || trimmed === '[]') return null;
     try {
       return JSON.parse(trimmed) as T;
     } catch (e) {
@@ -134,10 +143,10 @@ const AnalysisBlock: React.FC<{
 };
 
 // ----------------------------------------------------
-// 3. 파이 차트 컴포넌트
+// 3. 파이 차트 컴포넌트 (데이터 타입 수정)
 // ----------------------------------------------------
-const SpendPieChart: React.FC<{ data: SpendChartJson }> = ({ data }) => {
-  const items = Array.isArray(data.by_category) ? data.by_category : [];
+const SpendPieChart: React.FC<{ data: ChartDataArray[] }> = ({ data }) => {
+  const items = Array.isArray(data) ? data : [];
   if (items.length === 0) {
     return (
       <Typography variant="body2" color="text.secondary">
@@ -151,7 +160,7 @@ const SpendPieChart: React.FC<{ data: SpendChartJson }> = ({ data }) => {
     value: item.amount,
   }));
 
-  const COLORS = ["#0074E9", "#00C49F", "#FFBB28", "#FF8042", "#8884D8"];
+  const COLORS = ["#0074E9", "#00C49F", "#FFBB28", "#FF8042", "#8884D8", "#6a0dad", "#ff6f61"];
 
   return (
     <Box sx={{ width: "100%", height: 280 }}>
@@ -260,11 +269,11 @@ const ReportDetailView: React.FC<ReportDetailViewProps> = ({
 }) => {
   const createdDate = new Date(report.create_at);
 
-  // JSON 필드 파싱
-  const spendChart = parseJsonField<SpendChartJson>(
+  // 🚨 JSON 필드 파싱 (최신 타입 반영)
+  const spendChart = parseJsonField<SpendChartJsonType>(
     report.spend_chart_json as any
-  ) || {};
-  const consumeSummary = parseJsonField<ConsumeAnalysisSummary>(
+  );
+  const consumeSummary = parseJsonField<NewConsumeAnalysisSummary>(
     report.consume_analysis_summary as any
   );
   const rawChanges = parseJsonField<string[]>(report.change_raw_changes as any);
@@ -272,9 +281,8 @@ const ReportDetailView: React.FC<ReportDetailViewProps> = ({
     report.policy_changes as any
   );
 
-  const hasCategories =
-    Array.isArray(spendChart.by_category) &&
-    spendChart.by_category.length > 0;
+  // 🚨 차트 데이터는 raw array이므로, 배열인지 확인
+  const hasCategories = Array.isArray(spendChart) && spendChart.length > 0;
 
   const hasNetProfit = typeof report.net_profit === "number";
   const hasProfitRate = typeof report.profit_rate === "number";
@@ -282,11 +290,10 @@ const ReportDetailView: React.FC<ReportDetailViewProps> = ({
   const hasConsumeText =
     !!report.consume_report ||
     !!(consumeSummary &&
-      (typeof consumeSummary.total_spend === "number" ||
-        consumeSummary.risk_message ||
-        consumeSummary.recommendation ||
-        (consumeSummary.main_categories &&
-          consumeSummary.main_categories.length > 0)));
+      (consumeSummary.latest_total_spend ||
+        consumeSummary.total_change_diff ||
+        (consumeSummary.top_5_categories &&
+          consumeSummary.top_5_categories.length > 0)));
 
   return (
     <Box
@@ -352,7 +359,7 @@ const ReportDetailView: React.FC<ReportDetailViewProps> = ({
       >
         {/* 1) 소비 그래프 (파이 차트) */}
         <AnalysisBlock title="소비 그래프 (파이 차트)">
-          {hasCategories ? (
+          {hasCategories && spendChart ? (
             <SpendPieChart data={spendChart} />
           ) : (
             <Typography variant="body2" color="text.secondary">
@@ -362,27 +369,32 @@ const ReportDetailView: React.FC<ReportDetailViewProps> = ({
         </AnalysisBlock>
 
         {/* 2) 소비 그래프 데이터 (카테고리 요약) */}
-        <AnalysisBlock title="소비 그래프 데이터">
-          {hasCategories ? (
+        <AnalysisBlock title="소비 그래프 데이터 (Top 5)">
+          {hasCategories && spendChart ? (
             <>
-              {spendChart.by_category!.map((item, idx) => (
-                <Typography
-                  key={idx}
-                  variant="body2"
-                  sx={{ lineHeight: 1.8 }}
-                >
-                  • {item.category}:{" "}
-                  {Number(item.amount).toLocaleString()} 원
-                </Typography>
-              ))}
+              {/* 🚨 전체 배열에서 상위 5개만 표시 */}
+              {spendChart
+                .sort((a, b) => b.amount - a.amount)
+                .slice(0, 5)
+                .map((item, idx) => (
+                  <Typography
+                    key={idx}
+                    component="li"
+                    variant="body2"
+                    sx={{ lineHeight: 1.8, ml: 2, listStyleType: 'disc' }}
+                  >
+                    {item.category}:{" "}
+                    {Number(item.amount).toLocaleString()} 원
+                  </Typography>
+                ))}
 
-              {typeof spendChart.total_spend === "number" && (
+              {consumeSummary?.latest_total_spend && (
                 <Typography
                   variant="body2"
                   sx={{ mt: 1.5, fontWeight: 600 }}
                 >
                   총 지출:{" "}
-                  {spendChart.total_spend.toLocaleString()} 원
+                  {consumeSummary.latest_total_spend} 원
                 </Typography>
               )}
             </>
@@ -411,29 +423,25 @@ const ReportDetailView: React.FC<ReportDetailViewProps> = ({
                 </Typography>
               )}
 
+              {/* 🚨 최신 키를 사용하도록 수정 */}
               {consumeSummary && (
                 <Box sx={{ mt: 0.5 }}>
-                  {typeof consumeSummary.total_spend === "number" && (
+                  {consumeSummary.latest_total_spend && (
                     <Typography variant="body2" sx={{ mb: 0.5 }}>
                       • 월 총 지출:{" "}
-                      {consumeSummary.total_spend.toLocaleString()} 원
+                      {consumeSummary.latest_total_spend} 원
                     </Typography>
                   )}
-                  {consumeSummary.risk_message && (
+                  {consumeSummary.total_change_diff && (
                     <Typography variant="body2" sx={{ mb: 0.5 }}>
-                      • 위험 메시지: {consumeSummary.risk_message}
+                      • 총 지출 변동: {consumeSummary.total_change_diff}
                     </Typography>
                   )}
-                  {consumeSummary.recommendation && (
-                    <Typography variant="body2" sx={{ mb: 0.5 }}>
-                      • 권장 사항: {consumeSummary.recommendation}
-                    </Typography>
-                  )}
-                  {consumeSummary.main_categories &&
-                    consumeSummary.main_categories.length > 0 && (
+                  {consumeSummary.top_5_categories &&
+                    consumeSummary.top_5_categories.length > 0 && (
                       <Typography variant="body2" sx={{ mt: 0.5 }}>
-                        • 주요 카테고리:{" "}
-                        {consumeSummary.main_categories.join(", ")}
+                        • 주요 5대 카테고리:{" "}
+                        {consumeSummary.top_5_categories.join(", ")}
                       </Typography>
                     )}
                 </Box>
@@ -504,7 +512,7 @@ const ReportDetailView: React.FC<ReportDetailViewProps> = ({
               )}
               {hasProfitRate && (
                 <Typography variant="body2">
-                  • 수익률: {(report.profit_rate! * 100).toFixed(2)}%
+                  • 수익률: {report.profit_rate!.toFixed(2)}%
                 </Typography>
               )}
             </Stack>
@@ -560,7 +568,7 @@ const ReportDetailView: React.FC<ReportDetailViewProps> = ({
         </AnalysisBlock>
 
         {/* 전체 통합 보고서 */}
-        <AnalysisBlock title="전체 통합 보고서">
+        <AnalysisBlock title="전체 통합 보고서 (Summarize)">
           {report.summarize ? (
             <Typography
               variant="body1"
@@ -593,26 +601,59 @@ export default function Reports() {
 
   React.useEffect(() => {
     const fetchReports = async () => {
-      if (!accessToken) {
+      // 🚨 1. API 요청 시작 시점 로깅
+      console.log("--- 리포트 목록 조회 시작 ---");
+      console.log(`API_URL: ${API_URL}`);
+      console.log(`Access Token 존재 여부: ${!!accessToken}`);
+      
+      // Mock Auth 사용 시 토큰 체크는 생략
+      if (!accessToken) { 
         setLoading(false);
-        return;
+        // return; // 실제 사용 시 주석 해제 필요
       }
 
       setLoading(true);
       setError(null);
       try {
-        const res = await axios.get<ReportDto[]>(API_URL, {
-          timeout: 15000,
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
+        // 🚨 2. 요청 헤더 정보 로깅
+        const headers = {
+            Authorization: `Bearer ${accessToken}`, 
             Accept: "application/json",
-          },
+        };
+        console.log("요청 헤더:", headers);
+        
+        const res = await axios.get<ReportDto[]>(API_URL, {
+          timeout: 35000,
+          headers: headers, // 로깅된 헤더 사용
         });
+
+        // 🚨 3. 요청 성공 시 데이터 로깅
+        console.log("리포트 목록 조회 성공. 데이터 개수:", res.data.length);
         setReports(res.data);
       } catch (err: any) {
-        console.error("리포트 목록 조회 실패:", err?.response ?? err);
-        setError("리포트 목록을 불러오는 중 오류가 발생했습니다.");
+        // 🚨 4. 요청 실패 시 상세 오류 정보 로깅
+        console.error("--- 리포트 목록 조회 실패 상세 ---");
+        
+        if (err.response) {
+            // HTTP 상태 코드가 2xx 범위를 벗어난 경우 (예: 404, 500)
+            console.error("응답 오류 상태 코드:", err.response.status);
+            console.error("응답 데이터:", err.response.data);
+            setError(`[HTTP Error ${err.response.status}] 리포트 목록을 불러오는 중 오류가 발생했습니다. (백엔드 확인 필요)`);
+        } else if (err.request) {
+            // 요청이 만들어졌으나 응답을 받지 못한 경우 (예: 네트워크 오류, CORS 문제, 백엔드 서버 다운)
+            console.error("요청 오류: 응답을 받지 못함. 서버 또는 네트워크 상태 확인 필요.");
+            setError("네트워크 오류 또는 서버 응답 없음. 서버가 실행 중인지 확인하세요.");
+        } else {
+            // 요청 설정 중 오류가 발생한 경우
+            console.error("Axios 설정 오류:", err.message);
+            setError(`클라이언트 오류: ${err.message}`);
+        }
+        
+        // 원본 콘솔 출력도 유지
+        console.error("원본 오류 객체:", err);
       } finally {
+        // 🚨 5. 요청 완료 시점 로깅
+        console.log("--- 리포트 목록 조회 완료 ---");
         setLoading(false);
       }
     };
