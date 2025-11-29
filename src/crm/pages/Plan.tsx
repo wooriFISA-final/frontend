@@ -87,9 +87,23 @@ export default function Plan() {
   const displayEmail = storedEmail ?? "";
 
   const [messages, setMessages] = React.useState<Message[]>(initialMessages);
-  const [activeConversationId, setActiveConversationId] = React.useState(
-    "conv-1"
-  );
+
+  // 세션 ID 관리: localStorage에서 가져오거나 새로 생성
+  const [activeConversationId, setActiveConversationId] = React.useState(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("active_conversation_id");
+      if (stored) {
+        return stored;
+      }
+    }
+    // 없으면 새로 생성
+    const newId = `conv-${Date.now()}`;
+    if (typeof window !== "undefined") {
+      localStorage.setItem("active_conversation_id", newId);
+    }
+    return newId;
+  });
+
   const [isLoading, setIsLoading] = React.useState(false);
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
 
@@ -243,8 +257,13 @@ export default function Plan() {
   };
 
   const handleNewChat = () => {
+    const newSessionId = `conv-${Date.now()}`;
     setMessages(initialMessages);
-    setActiveConversationId(`conv-new-${Date.now()}`);
+    setActiveConversationId(newSessionId);
+    // localStorage에 새 세션 ID 저장
+    if (typeof window !== "undefined") {
+      localStorage.setItem("active_conversation_id", newSessionId);
+    }
   };
 
   const handleSelectConversation = (id: string) => {
