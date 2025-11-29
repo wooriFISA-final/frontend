@@ -10,7 +10,9 @@ import ListItem from "@mui/material/ListItem";
 import ListItemButton from "@mui/material/ListItemButton";
 import ListItemText from "@mui/material/ListItemText";
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
+import PersonIcon from "@mui/icons-material/Person";
 import { useTheme } from "@mui/material/styles"; // 🔹 테마 사용
+
 
 interface ConversationHistory {
   id: string;
@@ -19,26 +21,24 @@ interface ConversationHistory {
 }
 
 interface ChatSidebarProps {
-  userProfile?: {
+  userProfile: {
     name: string;
     avatar?: string;
     email?: string;
   };
-  conversationHistory?: ConversationHistory[];
-  onNewChat?: () => void;
-  onSelectConversation?: (id: string) => void;
-  onDeleteConversation?: (id: string) => void;
-  activeConversationId?: string;
+  conversationHistory: ConversationHistory[];
+  onNewChat: () => void;
+  onSelectConversation: (id: string) => void;
+  onDeleteConversation: (id: string) => void;
+  activeConversationId: string;
 }
 
 export default function ChatSidebar({
-  userProfile = {
-    name: "John Doe",
-    email: "john@example.com",
-  },
-  conversationHistory = [],
+  userProfile,
+  conversationHistory,
   onNewChat,
   onSelectConversation,
+  // onDeleteConversation,
   activeConversationId,
 }: ChatSidebarProps) {
   const theme = useTheme();
@@ -50,13 +50,13 @@ export default function ChatSidebar({
         width: "100%",
         display: "flex",
         flexDirection: "column",
-        bgcolor: theme.palette.background.paper, // 🔹 다크/라이트 공통 카드 배경
+        bgcolor: theme.palette.background.paper,
         borderRadius: 2,
         boxShadow: "0 2px 8px rgba(0, 0, 0, 0.05)",
         pt: 2.5,
         px: 2,
         overflow: "auto",
-        border: `1px solid ${theme.palette.divider}`, // 🔹 구분선도 테마 기반
+        border: `1px solid ${theme.palette.divider}`,
       }}
       elevation={0}
     >
@@ -68,13 +68,10 @@ export default function ChatSidebar({
             sx={{
               width: 40,
               height: 40,
-              bgcolor: theme.palette.primary.main,
+              bgcolor: "#20C4F4",  // 우리은행 다크 블루
             }}
           >
-            {userProfile.name
-              .split(" ")
-              .map((n) => n[0])
-              .join("")}
+            <PersonIcon sx={{ fontSize: 24 }} />
           </Avatar>
           <Stack spacing={0.25} sx={{ minWidth: 0 }}>
             <Typography
@@ -113,8 +110,8 @@ export default function ChatSidebar({
             py: 1.2,
             px: 2,
             borderRadius: 2,
-            backgroundColor: theme.palette.primary.main,
-            color: theme.palette.primary.contrastText,
+            background: "linear-gradient(135deg, #20C4F4 0%, #0078B5 100%)",  // 우리은행 블루 그라데이션
+            color: "#FFFFFF",
             fontWeight: 500,
             fontSize: "0.95rem",
             display: "flex",
@@ -123,10 +120,11 @@ export default function ChatSidebar({
             gap: 1,
             cursor: "pointer",
             transition: "all 0.2s ease",
-            boxShadow: "0 2px 8px rgba(0, 116, 233, 0.15)",
+            boxShadow: "0 2px 8px rgba(0, 120, 181, 0.25)",
             "&:hover": {
-              backgroundColor: theme.palette.primary.dark,
-              boxShadow: "0 4px 12px rgba(0, 116, 233, 0.25)",
+              background: "linear-gradient(135deg, #1AB0E0 0%, #005A8C 100%)",  // 더 진한 블루
+              boxShadow: "0 4px 12px rgba(0, 120, 181, 0.35)",
+              transform: "translateY(-1px)",
             },
           }}
         >
@@ -163,22 +161,39 @@ export default function ChatSidebar({
                     <ListItemButton
                       selected={selected}
                       onClick={() => onSelectConversation?.(conversation.id)}
-                      sx={{
+                      sx={(theme) => ({
                         borderRadius: 2,
                         py: 1.2,
-                        bgcolor: selected
-                          ? theme.palette.action.selected
+                        background: selected
+                          ? theme.palette.mode === "dark"
+                            ? "rgba(32, 196, 244, 0.12)"  // 다크: 우리은행 블루 틴트
+                            : "rgba(32, 196, 244, 0.08)"  // 라이트: 우리은행 블루 틴트
                           : "transparent",
                         color: selected
-                          ? theme.palette.primary.main
+                          ? theme.palette.mode === "dark"
+                            ? "#20C4F4"  // 다크: 밝은 우리은행 블루
+                            : "#0078B5"  // 라이트: 우리은행 다크 블루
                           : theme.palette.text.primary,
+                        border: selected
+                          ? `1px solid ${theme.palette.mode === "dark"
+                            ? "rgba(32, 196, 244, 0.3)"
+                            : "rgba(32, 196, 244, 0.2)"
+                          }`
+                          : "1px solid transparent",
                         transition: "all 0.2s ease",
                         "&:hover": {
                           bgcolor: selected
-                            ? theme.palette.action.selected
-                            : theme.palette.action.hover,
+                            ? theme.palette.mode === "dark"
+                              ? "rgba(32, 196, 244, 0.18)"
+                              : "rgba(32, 196, 244, 0.12)"
+                            : theme.palette.mode === "dark"
+                              ? "rgba(148, 163, 184, 0.1)"
+                              : theme.palette.action.hover,
+                          borderColor: theme.palette.mode === "dark"
+                            ? "rgba(32, 196, 244, 0.4)"
+                            : "rgba(32, 196, 244, 0.3)",
                         },
-                      }}
+                      })}
                     >
                       <ListItemText
                         primary={conversation.title}
@@ -189,6 +204,7 @@ export default function ChatSidebar({
                             overflow: "hidden",
                             textOverflow: "ellipsis",
                             whiteSpace: "nowrap",
+                            fontWeight: selected ? 600 : 400,
                           },
                         }}
                         secondaryTypographyProps={{
