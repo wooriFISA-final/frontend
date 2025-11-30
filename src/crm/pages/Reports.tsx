@@ -1,4 +1,3 @@
-// src/crm/pages/Reports.tsx
 import * as React from "react";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
@@ -10,26 +9,29 @@ import CardContent from "@mui/material/CardContent";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import Chip from "@mui/material/Chip";
 import axios from "axios";
-import { useAuth } from "../../auth/AuthContext";
+import { useAuth } from "../../auth/AuthContext"; // 🚨 컴파일 오류 해결을 위해 경로를 주석 처리합니다.
 
-// 🔹 Recharts (파이 차트)
+
+// 🔹 Recharts (파이 차트만 유지)
 import {
   PieChart,
   Pie,
   Tooltip,
-  Legend,
   ResponsiveContainer,
   Cell,
+  Legend,
 } from "recharts";
 
 // ----------------------------------------------------
-// 1. API 설정 + 타입 정의 (최신 백엔드 구조 반영)
+// 1. API 설정 + 타입 정의
 // ----------------------------------------------------
-
-const API_URL = "http://localhost:8000/reports/"; 
+// 리포트 목록 조회용 (백엔드 서버)
+const REPORTS_API_URL = "http://localhost:8000/reports/";
+// 리포트 생성용 (Agent 서버 - Report 그래프)
+const AGENT_API_URL = "http://localhost:8080/chat/report";
 
 // [차트 데이터 타입]: Backend에서 JSON 문자열로 저장하는 배열 구조
-interface ChartDataArray { 
+interface ChartDataArray {
   category: string;
   amount: number;
 }
@@ -51,7 +53,7 @@ interface PolicyChange {
   effective_date: string;
 }
 
-// FastAPI ReportRead 에 맞춘 타입 (JSON 필드는 string | object로 유연하게 받음)
+// FastAPI ReportRead 에 맞춘 타입 
 interface ReportDto {
   report_id: number;
   user_id: number;
@@ -66,13 +68,13 @@ interface ReportDto {
   threelines_summary: string | null;
   summarize?: string | null;
 
-  // JSON / 숫자 컬럼들 (string | object로 유연하게 받음)
-  consume_analysis_summary?: NewConsumeAnalysisSummary | string | null; 
-  spend_chart_json?: SpendChartJsonType | string | null; 
+  // JSON / 숫자 컬럼들 
+  consume_analysis_summary?: NewConsumeAnalysisSummary | string | null;
+  spend_chart_json?: SpendChartJsonType | string | null;
   change_raw_changes?: string[] | string | null;
   policy_changes?: PolicyChange[] | string | null;
   net_profit?: number | null;
-  profit_rate?: number | null; 
+  profit_rate?: number | null;
 }
 
 // ----------------------------------------------------
@@ -88,10 +90,10 @@ function parseJsonField<T>(value: any): T | null {
   // 이미 객체(Object)이거나 배열(Array)인 경우
   if (typeof value === "object") {
     if (Array.isArray(value) && value.length > 0) {
-        return value as T;
+      return value as T;
     }
     if (!Array.isArray(value) && Object.keys(value).length === 0) {
-        return null; 
+      return null;
     }
     return value as T;
   }
@@ -112,6 +114,154 @@ function parseJsonField<T>(value: any): T | null {
 }
 
 // ----------------------------------------------------
+// 1-2. [신규] Markdown 제거 유틸리티 함수
+// ----------------------------------------------------
+
+/**
+ * 일반적인 Markdown 텍스트 형식(굵게, 리스트 마커)을 제거하고
+ * 깔끔한 텍스트로 변환합니다.
+ */
+function parseMarkdownText(text: string | null | undefined): string | null {
+  if (!text) return null;
+
+  let cleanedText = text;
+
+  // 1. 굵게 처리 (**, __) 제거: **텍스트** -> 텍스트
+  cleanedText = cleanedText.replace(/(\*\*|__)(.*?)\1/g, '$2');
+
+  // 2. 리스트 마커 제거: 1. 또는 - 또는 * 다음에 오는 공백 제거
+  cleanedText = cleanedText.replace(/^(\s*[\d]+\.|\s*[\-\*])\s+/gm, '$1 ');
+
+  // 3. 문장 시작 부분의 공백 제거 (trim)
+  cleanedText = cleanedText.trim();
+
+  // 4. (옵션) 문장 시작 부분의 불필요한 공백 한 번 더 정리
+  cleanedText = cleanedText.replace(/(\r?\n|\r)\s*(\d+\.)\s*/g, '$1$2 ');
+
+
+  return cleanedText;
+}
+
+// ----------------------------------------------------
+// 1-3. [신규] 그라데이션 버튼 스타일
+// ----------------------------------------------------
+const GradientButtonStyle = {
+  background: "linear-gradient(135deg, #20C4F4 0%, #0078B5 100%)", // 기본 그라데이션
+  color: "#FFFFFF",
+  fontWeight: 600, // Button 컴포넌트에서는 600을 사용하는 것이 일반적
+  transition: "all 0.2s ease",
+  boxShadow: "0 2px 8px rgba(0, 120, 181, 0.25)",
+  "&:hover": {
+    background: "linear-gradient(135deg, #1AB0E0 0%, #005A8C 100%)", // Hover 그라데이션
+    boxShadow: "0 4px 12px rgba(0, 120, 181, 0.35)",
+    transform: "translateY(-1px)",
+    // Material UI Button은 배경색을 hover에서 덮어쓰기 때문에, !important가 필요할 수 있으나,
+    // 여기서는 background만 지정하여 MUI의 기본 hover 동작을 방지합니다.
+  },
+};
+
+// ----------------------------------------------------
+// 1-4. [신규] FormattedText 컴포넌트 (마크다운 렌더링 - 심플 버전)
+// ----------------------------------------------------
+/**
+ * 마크다운 스타일의 텍스트를 받아서 가독성 좋게 변환합니다.
+ * 🚨 [수정] 줄바꿈 전처리 로직 개선: 리스트 마커를 보존하면서 마침표 뒤 줄바꿈 적용
+ */
+const FormattedText: React.FC<{ text: string | null }> = ({ text }) => {
+  if (!text) return null;
+
+  let processedText = text;
+
+  // 1. 마침표(. ) 뒤에 줄바꿈 추가하되, 이미 줄바꿈되거나 리스트 마커 다음에 나오지 않도록 개선
+  processedText = processedText.replace(/([^.\n\d])\. /g, '$1.\n');
+
+  // 2. "숫자. " 패턴 앞에 줄바꿈 추가 (이미 줄의 시작인 경우는 제외)
+  processedText = processedText.replace(/([^\n])(\d+\.\s)/g, '$1\n$2');
+
+  // 3. "- " 패턴 앞에 줄바꿈 추가 (이미 줄의 시작인 경우는 제외)
+  processedText = processedText.replace(/([^\n])(\-\s)/g, '$1\n$2');
+
+  // 4. "📌" 패턴 앞에 줄바꿈 추가
+  processedText = processedText.replace(/(📌)/g, '\n$1');
+
+  // **굵게** 처리 함수
+  const renderBoldText = (line: string) => {
+    const parts = line.split(/(\*\*.*?\*\*)/g);
+    return parts.map((part, index) => {
+      if (part.startsWith("**") && part.endsWith("**")) {
+        // **내용** -> 굵게
+        return (
+          <Typography component="span" key={index} fontWeight={600}>
+            {part.slice(2, -2)}
+          </Typography>
+        );
+      }
+      return part;
+    });
+  };
+
+  return (
+    <Stack spacing={0.5}>
+      {/* 줄바꿈 문자를 기준으로 확실하게 분리 */}
+      {processedText.split(/\r?\n/).map((line, index) => {
+        const trimmedLine = line.trim();
+
+        // 빈 줄은 무시
+        if (!trimmedLine) return null;
+
+        // 1. 메인 헤더 (숫자 + 점) 감지
+        if (/^\d+\.\s/.test(trimmedLine)) {
+          // 🚨 [수정] 리스트 아이템으로 간주하고, 리스트 아이템 스타일을 적용합니다.
+          return (
+            <Box key={index} sx={{ display: "flex", alignItems: "flex-start", pl: 0, mb: 0.5 }}>
+              <Typography variant="body2" sx={{ mr: 1, color: "text.primary", fontWeight: 700 }}>
+                {trimmedLine.split('.')[0]}.
+              </Typography>
+              <Typography variant="body2" sx={{ lineHeight: 1.7, color: "text.primary" }}>
+                {renderBoldText(trimmedLine.substring(trimmedLine.indexOf('.') + 1).trim())}
+              </Typography>
+            </Box>
+          );
+        }
+
+        // 2. 리스트 아이템 (하이픈) 감지
+        if (trimmedLine.startsWith("- ")) {
+          return (
+            <Box key={index} sx={{ display: "flex", alignItems: "flex-start", pl: 1.5, mb: 0.5 }}>
+              <Typography variant="body2" sx={{ mr: 1, color: "text.secondary", mt: 0.3 }}>•</Typography>
+              <Typography variant="body2" sx={{ lineHeight: 1.7, color: "text.primary" }}>
+                {renderBoldText(trimmedLine.substring(2))}
+              </Typography>
+            </Box>
+          );
+        }
+
+        // 3. 핀 포인트 (📌) 감지
+        if (trimmedLine.includes("📌")) {
+          return (
+            <Typography
+              key={index}
+              variant="body2"
+              sx={{ mt: 2, mb: 1, color: "text.primary", fontWeight: 600 }}
+            >
+              {renderBoldText(trimmedLine)}
+            </Typography>
+          );
+        }
+
+        // 4. 일반 텍스트
+        return (
+          <Typography key={index} variant="body2" sx={{ lineHeight: 1.7, color: "text.primary", mb: 0.5 }}>
+            {renderBoldText(trimmedLine)}
+          </Typography>
+        );
+      })}
+    </Stack>
+  );
+};
+
+
+// ----------------------------------------------------
 // 2. 공통 블록 컴포넌트
 // ----------------------------------------------------
 const AnalysisBlock: React.FC<{
@@ -123,7 +273,7 @@ const AnalysisBlock: React.FC<{
       sx={{
         p: 3,
         borderRadius: 1,
-        bgcolor: "background.paper",
+        bgcolor: "#FFFFFF",
         border: 1,
         borderColor: "divider",
         minHeight: 80,
@@ -143,7 +293,7 @@ const AnalysisBlock: React.FC<{
 };
 
 // ----------------------------------------------------
-// 3. 파이 차트 컴포넌트 (데이터 타입 수정)
+// 3. 파이 차트 컴포넌트
 // ----------------------------------------------------
 const SpendPieChart: React.FC<{ data: ChartDataArray[] }> = ({ data }) => {
   const items = Array.isArray(data) ? data : [];
@@ -155,42 +305,95 @@ const SpendPieChart: React.FC<{ data: ChartDataArray[] }> = ({ data }) => {
     );
   }
 
-  const chartData = items.map((item) => ({
+  // ✅ [수정] 차트 데이터를 상위 5개 항목만 사용
+  const top5Items = items
+    .sort((a, b) => b.amount - a.amount)
+    .slice(0, 5);
+
+  const chartData = top5Items.map((item) => ({
     name: item.category,
     value: item.amount,
   }));
 
-  const COLORS = ["#0074E9", "#00C49F", "#FFBB28", "#FF8042", "#8884D8", "#6a0dad", "#ff6f61"];
+  // ✅ 요청하신 색상표 (PANTONE 3015, 2915) 기반의 파란 계열 색상
+  const COLORS = [
+    "#0078B9",
+    "#20C4F4",
+    "#00539C",
+    "#87CEEB",
+    "#1E90FF",
+  ];
+
+  // ✅ 커스텀 라벨 렌더링 함수 - 각 섹션에 카테고리명과 금액 표시 (지시선 포함)
+  const renderCustomizedLabel = ({ cx, cy, midAngle, outerRadius, percent, index, name, value }: any) => {
+    const RADIAN = Math.PI / 180;
+    const radius = outerRadius + 20;
+    const x = cx + radius * Math.cos(-midAngle * RADIAN);
+    const y = cy + radius * Math.sin(-midAngle * RADIAN);
+    const mx = cx + (outerRadius + 30) * Math.cos(-midAngle * RADIAN);
+    const my = cy + (outerRadius + 30) * Math.sin(-midAngle * RADIAN);
+    const ex = mx + (Math.cos(-midAngle * RADIAN) >= 0 ? 1 : -1) * 22;
+    const ey = my;
+    const textAnchor = (Math.cos(-midAngle * RADIAN) >= 0 ? 'start' : 'end');
+
+    // 3% 미만은 라벨 표시 안함
+    if (percent < 0.03) return null;
+
+    return (
+      <g>
+        {/* 지시선 (화살표 모양의 선) */}
+        <path d={`M${x},${y}L${mx},${my}L${ex},${ey}`} stroke={COLORS[index % COLORS.length]} fill="none" />
+        {/* 라벨 텍스트 (카테고리명) */}
+        <text x={ex + (textAnchor === 'start' ? 1 : -1) * 12} y={ey} dy={-5} textAnchor={textAnchor} fill="#333" fontSize="12px">
+          {`${name}`}
+        </text>
+        {/* 라벨 텍스트 (금액 및 비율) */}
+        <text x={ex + (textAnchor === 'start' ? 1 : -1) * 12} y={ey} dy={10} textAnchor={textAnchor} fill="#999" fontSize="11px">
+          {`${Number(value).toLocaleString()}원 (${(percent * 100).toFixed(1)}%)`}
+        </text>
+      </g>
+    );
+  };
+
 
   return (
-    <Box sx={{ width: "100%", height: 280 }}>
+    <Box sx={{ width: "100%", height: 350 }}>
       <ResponsiveContainer>
-        <PieChart>
+        <PieChart margin={{ bottom: 10 }}>
           <Pie
             data={chartData}
             dataKey="value"
             nameKey="name"
             cx="50%"
             cy="50%"
-            outerRadius={120}
-            label
+            outerRadius={80} // 라벨을 위한 공간 확보
+            innerRadius={40}
+            labelLine={false} // 라벨 선 비활성화
+            label={renderCustomizedLabel} // 커스터마이징된 라벨 함수 적용
           >
-            {chartData.map((entry, index) => (
+            {chartData.map((_, index) => (
               <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
             ))}
           </Pie>
           <Tooltip
             formatter={(v: any) => `${Number(v).toLocaleString()} 원`}
           />
-          <Legend />
+          {/* ✅ [수정] 범례 다시 추가 */}
+          <Legend
+            layout="horizontal"
+            verticalAlign="bottom"
+            align="center"
+            wrapperStyle={{ paddingTop: 20 }}
+          />
         </PieChart>
       </ResponsiveContainer>
     </Box>
   );
 };
 
+
 // ----------------------------------------------------
-// 4. 리포트 카드 컴포넌트 (목록용)
+// 5. 리포트 카드 컴포넌트 (목록용)
 // ----------------------------------------------------
 interface ReportCardProps {
   report: ReportDto;
@@ -198,7 +401,18 @@ interface ReportCardProps {
 }
 
 const ReportCard: React.FC<ReportCardProps> = ({ report, onView }) => {
-  const createdDate = new Date(report.create_at);
+  let createdDate = new Date(report.create_at);
+  // 날짜 파싱 실패 시 현재 시간으로 대체 (렌더링 에러 방지)
+  if (isNaN(createdDate.getTime())) {
+    createdDate = new Date();
+  }
+
+  // 🚨 리포트는 생성일 기준 지난 달 데이터를 분석함
+  const targetDate = new Date(createdDate);
+  targetDate.setMonth(targetDate.getMonth() - 1);
+
+  // 🚨 3줄 요약에 마크다운 제거 적용
+  const cleanSummary = parseMarkdownText(report.threelines_summary);
 
   return (
     <Card
@@ -207,7 +421,7 @@ const ReportCard: React.FC<ReportCardProps> = ({ report, onView }) => {
         p: 1.5,
         borderRadius: 2,
         transition: "box-shadow 0.3s, transform 0.2s",
-        bgcolor: "background.paper",
+        bgcolor: "#FFFFFF",
         "&:hover": {
           boxShadow: theme.shadows[6],
           transform: "translateY(-2px)",
@@ -217,36 +431,50 @@ const ReportCard: React.FC<ReportCardProps> = ({ report, onView }) => {
       onClick={() => onView(report)}
     >
       <CardContent sx={{ p: 1.5, "&:last-child": { pb: 1.5 } }}>
-        <Stack direction="column" spacing={1.5}>
-          <Typography
-            variant="subtitle1"
-            fontWeight={700}
-            color="#0074E9"
-            sx={{ textDecoration: "underline" }}
-          >
-            {createdDate.getFullYear()}년 {createdDate.getMonth() + 1}월 통합 리포트
-          </Typography>
+        <Stack direction="column" spacing={1}>
+          {/* 1. 제목 + 별명 (Chip) */}
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap" }}>
+            <Typography
+              variant="subtitle1"
+              fontWeight={700}
+              color="#0078B9" // PANTONE 3015 기반 색상 유지
+              sx={{ textDecoration: "underline" }}
+            >
+              {targetDate.getFullYear()}년 {targetDate.getMonth() + 1}월 통합 리포트
+            </Typography>
 
-          <Typography variant="body2" color="text.secondary">
+            {report.cluster_nickname && (
+              <Chip
+                label={report.cluster_nickname}
+                size="small"
+                sx={{
+                  bgcolor: "#E3F2FD",
+                  color: "#0078B9",
+                  fontWeight: 700,
+                  fontSize: "0.75rem",
+                  height: 24,
+                  borderRadius: "12px",
+                }}
+              />
+            )}
+          </Box>
+
+          {/* 2. 생성일 (연한 색) */}
+          <Typography variant="caption" sx={{ color: "#999999" }}>
             생성일: {createdDate.toLocaleString()}
           </Typography>
 
-          {report.cluster_nickname && (
+          {/* 3. 3줄 요약 (연한 글씨, 전체 표시) */}
+          {cleanSummary && (
             <Typography
               variant="body2"
-              sx={{ color: "text.secondary", fontWeight: 500 }}
+              sx={{
+                color: "#999999",
+                mt: 1,
+                lineHeight: 1.6,
+              }}
             >
-              소비 성향: {report.cluster_nickname}
-            </Typography>
-          )}
-
-          {report.threelines_summary && (
-            <Typography
-              variant="body2"
-              color="text.primary"
-              sx={{ mt: 0.5, lineHeight: 1.6 }}
-            >
-              {report.threelines_summary}
+              {cleanSummary}
             </Typography>
           )}
         </Stack>
@@ -256,7 +484,7 @@ const ReportCard: React.FC<ReportCardProps> = ({ report, onView }) => {
 };
 
 // ----------------------------------------------------
-// 5. 상세 보기
+// 6. 상세 보기
 // ----------------------------------------------------
 interface ReportDetailViewProps {
   report: ReportDto;
@@ -267,9 +495,17 @@ const ReportDetailView: React.FC<ReportDetailViewProps> = ({
   report,
   onBack,
 }) => {
-  const createdDate = new Date(report.create_at);
+  let createdDate = new Date(report.create_at);
+  // 날짜 파싱 실패 시 현재 시간으로 대체 (렌더링 에러 방지)
+  if (isNaN(createdDate.getTime())) {
+    createdDate = new Date();
+  }
 
-  // 🚨 JSON 필드 파싱 (최신 타입 반영)
+  // 🚨 리포트는 생성일 기준 지난 달 데이터를 분석함
+  const targetDate = new Date(createdDate);
+  targetDate.setMonth(targetDate.getMonth() - 1);
+
+  // 🚨 JSON 필드 파싱 및 차트 데이터 준비
   const spendChart = parseJsonField<SpendChartJsonType>(
     report.spend_chart_json as any
   );
@@ -277,11 +513,8 @@ const ReportDetailView: React.FC<ReportDetailViewProps> = ({
     report.consume_analysis_summary as any
   );
   const rawChanges = parseJsonField<string[]>(report.change_raw_changes as any);
-  const policyChanges = parseJsonField<PolicyChange[]>(
-    report.policy_changes as any
-  );
 
-  // 🚨 차트 데이터는 raw array이므로, 배열인지 확인
+
   const hasCategories = Array.isArray(spendChart) && spendChart.length > 0;
 
   const hasNetProfit = typeof report.net_profit === "number";
@@ -294,6 +527,11 @@ const ReportDetailView: React.FC<ReportDetailViewProps> = ({
         consumeSummary.total_change_diff ||
         (consumeSummary.top_5_categories &&
           consumeSummary.top_5_categories.length > 0)));
+
+  // 🚨 마크다운 제거된 텍스트 변수 (일반 텍스트용)
+  const cleanChangeReport = parseMarkdownText(report.change_analysis_report);
+  const cleanThreelinesSummary = parseMarkdownText(report.threelines_summary);
+
 
   return (
     <Box
@@ -310,13 +548,14 @@ const ReportDetailView: React.FC<ReportDetailViewProps> = ({
       <Button
         onClick={onBack}
         startIcon={<ArrowBackIcon />}
+        // ✅ 그라데이션 버튼 스타일 적용
         sx={{
           mb: 3,
           textTransform: "none",
-          fontWeight: 600,
-          backgroundColor: "#0074E9",
-          color: "white",
-          "&:hover": { backgroundColor: "#3399FF" },
+          ...GradientButtonStyle,
+          borderRadius: 2,
+          px: 2.5,
+          py: 1,
         }}
       >
         리포트 목록으로 돌아가기
@@ -325,15 +564,24 @@ const ReportDetailView: React.FC<ReportDetailViewProps> = ({
       {/* 상단 제목/메타 정보 */}
       <Stack direction="row" alignItems="center" spacing={2} mb={1}>
         <Typography variant="h5" fontWeight={600} color="text.primary">
-          {createdDate.getFullYear()}년 {createdDate.getMonth() + 1}월 상세 통합 리포트
+          {targetDate.getFullYear()}년 {targetDate.getMonth() + 1}월 상세 통합 리포트
         </Typography>
         {report.cluster_nickname && (
           <Chip
             label={report.cluster_nickname}
             sx={{
               backgroundColor: "#E3F2FD",
-              color: "#0074E9",
-              fontWeight: 600,
+              color: "#0078B9",
+              fontWeight: 700,
+              fontSize: "1.1rem",
+              height: "64px",
+              borderRadius: "32px",
+              px: 4,
+              "& .MuiChip-label": {
+                fontSize: "1.1rem",
+                fontWeight: 700,
+                px: 2,
+              },
             }}
           />
         )}
@@ -349,7 +597,7 @@ const ReportDetailView: React.FC<ReportDetailViewProps> = ({
           display: "grid",
           gridTemplateColumns: {
             xs: "1fr",
-            md: "repeat(3, 1fr)", // ✅ 데스크탑에서는 3등분
+            md: "repeat(3, 1fr)",
           },
           columnGap: 3,
           rowGap: 3,
@@ -409,19 +657,7 @@ const ReportDetailView: React.FC<ReportDetailViewProps> = ({
         <AnalysisBlock title="소비 분석">
           {hasConsumeText ? (
             <>
-              {report.consume_report && (
-                <Typography
-                  variant="body1"
-                  sx={{
-                    color: "text.primary",
-                    lineHeight: 1.8,
-                    whiteSpace: "pre-wrap",
-                    mb: 1.5,
-                  }}
-                >
-                  {report.consume_report}
-                </Typography>
-              )}
+              {/* ⚠️ consume_report가 JSON으로 들어오는 경우를 위해 비활성화 */}
 
               {/* 🚨 최신 키를 사용하도록 수정 */}
               {consumeSummary && (
@@ -457,14 +693,15 @@ const ReportDetailView: React.FC<ReportDetailViewProps> = ({
 
       {/* ================= 하단 영역 ================= */}
       <Stack spacing={3}>
-        {/* 소득·부채 변화 */}
+        {/* 1. 소득·부채 변화 */}
         <AnalysisBlock title="소득·부채 변화">
-          {report.change_analysis_report ? (
+          {/* 🚨 cleanChangeReport 적용 */}
+          {cleanChangeReport ? (
             <Typography
               variant="body1"
               sx={{ mb: 1.5, whiteSpace: "pre-wrap", lineHeight: 1.8 }}
             >
-              {report.change_analysis_report}
+              {cleanChangeReport}
             </Typography>
           ) : (
             <Typography variant="body2" color="text.secondary">
@@ -488,7 +725,7 @@ const ReportDetailView: React.FC<ReportDetailViewProps> = ({
           )}
         </AnalysisBlock>
 
-        {/* 투자 수익 분석 */}
+        {/* 2. 투자 수익 분석 */}
         <AnalysisBlock title="투자 수익 분석">
           {report.profit_analysis_report ? (
             <Typography
@@ -519,66 +756,25 @@ const ReportDetailView: React.FC<ReportDetailViewProps> = ({
           )}
         </AnalysisBlock>
 
-        {/* 정책 및 환경 변동 사항 */}
+        {/* 3. 정책 및 환경 변동 사항 (🚨 FormattedText 적용) */}
         <AnalysisBlock title="정책 및 환경 변동 사항">
           {report.policy_analysis_report ? (
-            <Typography
-              variant="body1"
-              sx={{ mb: 1.5, whiteSpace: "pre-wrap", lineHeight: 1.8 }}
-            >
-              {report.policy_analysis_report}
-            </Typography>
+            <FormattedText text={report.policy_analysis_report} />
           ) : (
             <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
               아직 등록된 정책 및 환경 변동 사항이 없습니다.
             </Typography>
           )}
-
-          {policyChanges && policyChanges.length > 0 && (
-            <Box component="ul" sx={{ pl: 2, m: 0 }}>
-              {policyChanges.map((pc, idx) => (
-                <Typography
-                  key={idx}
-                  component="li"
-                  variant="body2"
-                  sx={{ lineHeight: 1.8 }}
-                >
-                  {pc.effective_date ? `[${pc.effective_date}] ` : ""}
-                  {pc.change_summary}
-                </Typography>
-              ))}
-            </Box>
-          )}
         </AnalysisBlock>
 
-        {/* 3줄 요약 */}
+        {/* 4. 3줄 요약 (가장 마지막으로 배치) */}
         <AnalysisBlock title="3줄 요약">
-          {report.threelines_summary ? (
-            <Typography
-              variant="body1"
-              sx={{ whiteSpace: "pre-wrap", lineHeight: 1.8 }}
-            >
-              {report.threelines_summary}
-            </Typography>
+          {/* 🚨 cleanThreelinesSummary 적용 + FormattedText로 포맷팅 */}
+          {cleanThreelinesSummary ? (
+            <FormattedText text={cleanThreelinesSummary} />
           ) : (
             <Typography variant="body2" color="text.secondary">
               아직 3줄 요약이 생성되지 않았습니다.
-            </Typography>
-          )}
-        </AnalysisBlock>
-
-        {/* 전체 통합 보고서 */}
-        <AnalysisBlock title="전체 통합 보고서 (Summarize)">
-          {report.summarize ? (
-            <Typography
-              variant="body1"
-              sx={{ whiteSpace: "pre-wrap", lineHeight: 1.8 }}
-            >
-              {report.summarize}
-            </Typography>
-          ) : (
-            <Typography variant="body2" color="text.secondary">
-              아직 전체 통합 보고서가 생성되지 않았습니다.
             </Typography>
           )}
         </AnalysisBlock>
@@ -588,7 +784,7 @@ const ReportDetailView: React.FC<ReportDetailViewProps> = ({
 };
 
 // ----------------------------------------------------
-// 6. 메인 Reports 컴포넌트 (목록 + 상세 전환)
+// 7. 메인 Reports 컴포넌트 (목록 + 상세 전환)
 // ----------------------------------------------------
 
 export default function Reports() {
@@ -599,70 +795,148 @@ export default function Reports() {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
+  // ✅ [수정] 리포트 목록을 불러오는 함수 (useCallback으로 메모이제이션)
+  const fetchReports = React.useCallback(async () => {
+    // 🚨 1. API 요청 시작 시점 로깅
+    console.log("--- 리포트 목록 조회 시작 ---");
+    console.log(`REPORTS_API_URL: ${REPORTS_API_URL}`);
+    console.log(`Access Token 존재 여부: ${!!accessToken}`);
+
+    if (!accessToken) {
+      setLoading(false);
+      // return; // 실제 사용 시 주석 해제 필요
+    }
+
+    setLoading(true);
+    setError(null);
+    try {
+      // 🚨 2. 요청 헤더 정보 로깅
+      const headers = {
+        Authorization: `Bearer ${accessToken}`,
+        Accept: "application/json",
+      };
+      console.log("요청 헤더:", headers);
+
+      const res = await axios.get<ReportDto[]>(REPORTS_API_URL, {
+        timeout: 35000,
+        headers: headers, // 로깅된 헤더 사용
+      });
+
+      // 🚨 3. 요청 성공 시 데이터 로깅
+      console.log("리포트 목록 조회 성공. 데이터 개수:", res.data.length);
+      setReports(res.data);
+    } catch (err: any) {
+      // 🚨 4. 요청 실패 시 상세 오류 정보 로깅
+      console.error("--- 리포트 목록 조회 실패 상세 ---");
+
+      if (err.response) {
+        // HTTP 상태 코드가 2xx 범위를 벗어난 경우 (예: 404, 500)
+        console.error("응답 오류 상태 코드:", err.response.status);
+        console.error("응답 데이터:", err.response.data);
+        setError(`[HTTP Error ${err.response.status}] 리포트 목록을 불러오는 중 오류가 발생했습니다. (백엔드 확인 필요)`);
+      } else if (err.request) {
+        // 요청이 만들어졌으나 응답을 받지 못한 경우 (예: 네트워크 오류, CORS 문제, 백엔드 서버 다운)
+        console.error("요청 오류: 응답을 받지 못함. 서버 또는 네트워크 상태 확인 필요.");
+        setError("네트워크 오류 또는 서버 응답 없음. 서버가 실행 중인지 확인하세요.");
+      } else {
+        // 요청 설정 중 오류가 발생한 경우
+        console.error("Axios 설정 오류:", err.message);
+        setError(`클라이언트 오류: ${err.message}`);
+      }
+
+      // 원본 콘솔 출력도 유지
+      console.error("원본 오류 객체:", err);
+    } finally {
+      // 🚨 5. 요청 완료 시점 로깅
+      console.log("--- 리포트 목록 조회 완료 ---");
+      setLoading(false);
+    }
+  }, [accessToken]); // accessToken을 의존성 배열에 추가
+
   React.useEffect(() => {
-    const fetchReports = async () => {
-      // 🚨 1. API 요청 시작 시점 로깅
-      console.log("--- 리포트 목록 조회 시작 ---");
-      console.log(`API_URL: ${API_URL}`);
-      console.log(`Access Token 존재 여부: ${!!accessToken}`);
-      
-      // Mock Auth 사용 시 토큰 체크는 생략
-      if (!accessToken) { 
-        setLoading(false);
-        // return; // 실제 사용 시 주석 해제 필요
-      }
+    fetchReports();
+  }, [fetchReports]); // fetchReports를 의존성 배열에 추가
 
-      setLoading(true);
-      setError(null);
-      try {
-        // 🚨 2. 요청 헤더 정보 로깅
-        const headers = {
-            Authorization: `Bearer ${accessToken}`, 
-            Accept: "application/json",
-        };
-        console.log("요청 헤더:", headers);
-        
-        const res = await axios.get<ReportDto[]>(API_URL, {
-          timeout: 35000,
-          headers: headers, // 로깅된 헤더 사용
-        });
 
-        // 🚨 3. 요청 성공 시 데이터 로깅
-        console.log("리포트 목록 조회 성공. 데이터 개수:", res.data.length);
-        setReports(res.data);
-      } catch (err: any) {
-        // 🚨 4. 요청 실패 시 상세 오류 정보 로깅
-        console.error("--- 리포트 목록 조회 실패 상세 ---");
-        
-        if (err.response) {
-            // HTTP 상태 코드가 2xx 범위를 벗어난 경우 (예: 404, 500)
-            console.error("응답 오류 상태 코드:", err.response.status);
-            console.error("응답 데이터:", err.response.data);
-            setError(`[HTTP Error ${err.response.status}] 리포트 목록을 불러오는 중 오류가 발생했습니다. (백엔드 확인 필요)`);
-        } else if (err.request) {
-            // 요청이 만들어졌으나 응답을 받지 못한 경우 (예: 네트워크 오류, CORS 문제, 백엔드 서버 다운)
-            console.error("요청 오류: 응답을 받지 못함. 서버 또는 네트워크 상태 확인 필요.");
-            setError("네트워크 오류 또는 서버 응답 없음. 서버가 실행 중인지 확인하세요.");
-        } else {
-            // 요청 설정 중 오류가 발생한 경우
-            console.error("Axios 설정 오류:", err.message);
-            setError(`클라이언트 오류: ${err.message}`);
-        }
-        
-        // 원본 콘솔 출력도 유지
-        console.error("원본 오류 객체:", err);
-      } finally {
-        // 🚨 5. 요청 완료 시점 로깅
-        console.log("--- 리포트 목록 조회 완료 ---");
-        setLoading(false);
-      }
+  // ✅ [수정] 리포트 생성 요청 핸들러 (메시지/세션 형식으로 변경)
+  const handleCreateReport = async () => {
+    // ⚠️ 2025년 10월 데이터 요청 (사용자님의 요청에 따름)
+    const targetUserId = 1;
+    const targetYearMonth = "2025-10";
+
+    // ✅ [수정] Agent 서버 스펙에 맞춘 요청 본문
+    const requestData = {
+      message: `${targetUserId}번 사용자의 ${targetYearMonth}월 레포트를 작성해줘`,
+      session_id: "default-session",
     };
 
-    fetchReports();
-  }, [accessToken]);
+    if (!window.confirm(`${targetUserId}번 사용자의 ${targetYearMonth}월 리포트를 생성하시겠습니까?`)) {
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const headers = {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      };
+
+      console.log(`리포트 생성 요청: ${AGENT_API_URL}`);
+      console.log("요청 데이터:", requestData);
+
+      // ✅ POST 요청 전송 (Agent 서버로)
+      const res = await axios.post(AGENT_API_URL, requestData, {
+        timeout: 60000, // 리포트 생성은 시간이 걸릴 수 있으므로 타임아웃을 넉넉하게 설정
+        headers: headers,
+      });
+
+      console.log("리포트 생성 성공 - 전체 응답:", res);
+      console.log("리포트 생성 성공 - 응답 데이터:", res.data);
+      console.log("리포트 생성 성공 - 응답 상태:", res.data.status);
+      console.log("리포트 생성 성공 - 응답 메시지:", res.data.response);
+
+      alert(`[${targetYearMonth} 리포트] 생성이 완료되었습니다!\n\n${res.data.response || '웹 프론트에서 최신 리포트를 확인해 주세요.'}`);
+
+      // ✅ 성공 후 목록 새로고침
+      await fetchReports();
+
+      // ✅ loading 상태 해제
+      setLoading(false);
+
+    } catch (err: any) {
+      console.error("--- 리포트 생성 실패 상세 ---");
+      console.error("전체 에러 객체:", err);
+
+      if (err.response) {
+        console.error("응답 오류 상태 코드:", err.response.status);
+        console.error("응답 데이터:", err.response.data);
+        console.error("응답 헤더:", err.response.headers);
+        const detail = err.response.data.detail || err.response.data.response || "서버에서 리포트 생성에 실패했습니다.";
+        setError(`리포트 생성 실패: ${detail} (HTTP ${err.response.status})`);
+        alert(`리포트 생성 실패: ${detail}`);
+      } else if (err.request) {
+        console.error("요청은 전송되었으나 응답을 받지 못함:", err.request);
+        console.error("요청 상세:", {
+          url: AGENT_API_URL,
+          method: 'POST',
+          data: requestData
+        });
+        setError("네트워크 오류: 서버로부터 응답을 받지 못했습니다. Agent 서버가 실행 중인지 확인하세요.");
+        alert("리포트 생성 실패: 네트워크 오류 - 서버 응답 없음");
+      } else {
+        console.error("요청 설정 중 오류:", err.message);
+        setError(`클라이언트 오류: ${err.message}`);
+        alert(`리포트 생성 실패: ${err.message}`);
+      }
+      setLoading(false);
+    }
+  };
+
 
   const handleViewReport = (report: ReportDto) => {
-    setSelectedReport(report); // ✅ 추가 API 없이 상세 보기
+    setSelectedReport(report);
   };
 
   const handleBack = () => {
@@ -700,23 +974,21 @@ export default function Reports() {
         </Typography>
         <Button
           startIcon={<DownloadRoundedIcon />}
+          // ✅ [수정] onClick 핸들러 연결
+          onClick={handleCreateReport}
+          disabled={loading} // 요청 중 버튼 비활성화
           sx={{
-            backgroundColor: "#0074E9",
-            color: "white",
             textTransform: "none",
-            fontWeight: 500,
             borderRadius: 2,
             px: 2.5,
             py: 1,
-            boxShadow: "0 2px 8px rgba(0, 116, 233, 0.15)",
-            transition: "all 0.2s ease",
-            "&:hover": {
-              backgroundColor: "#3399FF",
-              boxShadow: "0 4px 12px rgba(0, 116, 233, 0.25)",
-            },
+            ...GradientButtonStyle,
+            // 요청 중일 때 스타일 변경
+            ...(loading && { opacity: 0.7, pointerEvents: 'none' }),
           }}
         >
-          Export All Reports
+          {/* ✅ [수정] 버튼 텍스트 변경 */}
+          {loading ? "작성 요청 중..." : "2025년 10월 리포트 작성하기"}
         </Button>
       </Stack>
 
@@ -740,7 +1012,7 @@ export default function Reports() {
               xs: "repeat(1, minmax(0, 1fr))",
               sm: "repeat(2, minmax(0, 1fr))",
               md: "repeat(3, minmax(0, 1fr))",
-              lg: "repeat(5, minmax(0, 1fr))",
+              lg: "repeat(4, minmax(0, 1fr))",
             },
             gap: 3,
             mb: 4,
