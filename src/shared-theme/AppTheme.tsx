@@ -106,28 +106,28 @@ export default function AppTheme(props: AppThemeProps) {
     // base palette (colorSchemes에서 온 값)
     const basePalette = selectedColorScheme.palette ?? {};
 
-    const palette =
+    const palette: any =
       mode === "dark"
         ? {
-            ...basePalette,
-            mode: "dark",
-            background: {
-              ...(basePalette as any).background,
-              // 🔹 너무 새까만 느낌 대신 조금 밝은 다크톤
-              default: "#111827", // 전체 배경
-              paper: "#020617", // 카드/패널 배경
-            },
-            text: {
-              ...(basePalette as any).text,
-              primary: "#F9FAFB",
-              secondary: "#9CA3AF",
-            },
-          }
+          ...basePalette,
+          mode: "dark" as PaletteMode,
+          background: {
+            ...(basePalette as any).background,
+            // 🔹 너무 새까만 느낌 대신 조금 밝은 다크톤
+            default: "#111827", // 전체 배경
+            paper: "#020617", // 카드/패널 배경
+          },
+          text: {
+            ...(basePalette as any).text,
+            primary: "#F9FAFB",
+            secondary: "#9CA3AF",
+          },
+        }
         : {
-            ...basePalette,
-            mode: "light",
-            // 라이트 모드는 colorSchemes에 정의된 대로 사용
-          };
+          ...basePalette,
+          mode: "light" as PaletteMode,
+          // 라이트 모드는 colorSchemes에 정의된 대로 사용
+        };
 
     return createTheme({
       cssVariables: {

@@ -1,5 +1,3 @@
-import * as React from "react";
-import Grid from "@mui/material/Grid";
 import Box from "@mui/material/Box";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
@@ -90,50 +88,78 @@ export default function CrmMainContent() {
       </Stack>
 
       {/* Stats Cards row */}
-      <Grid container spacing={2} sx={{ mb: 3 }}>
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: {
+            xs: "repeat(1, 1fr)",
+            sm: "repeat(2, 1fr)",
+            lg: "repeat(4, 1fr)",
+          },
+          gap: 2,
+          mb: 3,
+        }}
+      >
         {statCardsData.map((card, index) => (
-          <Grid key={index} item xs={12} sm={6} lg={3}>
-            <CrmStatCard
-              title={card.title}
-              value={card.value}
-              interval={card.interval}
-              trend={card.trend as "up" | "down"}
-              trendValue={card.trendValue}
-              data={card.data}
-            />
-          </Grid>
+          <CrmStatCard
+            key={index}
+            title={card.title}
+            value={card.value}
+            interval={card.interval}
+            trend={card.trend as "up" | "down"}
+            trendValue={card.trendValue}
+            data={card.data}
+          />
         ))}
-      </Grid>
+      </Box>
 
       {/* Charts row */}
-      <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={12} md={8}>
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: {
+            xs: "repeat(1, 1fr)",
+            md: "repeat(12, 1fr)",
+          },
+          gap: 2,
+          mb: 3,
+        }}
+      >
+        <Box sx={{ gridColumn: { xs: "span 1", md: "span 8" } }}>
           <CrmSalesChart />
-        </Grid>
-        <Grid item xs={12} md={4}>
+        </Box>
+        <Box sx={{ gridColumn: { xs: "span 1", md: "span 4" } }}>
           <CrmLeadsBySourceChart />
-        </Grid>
-      </Grid>
+        </Box>
+      </Box>
 
       {/* Tables & Other content */}
-      <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={12} lg={8}>
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: {
+            xs: "repeat(1, 1fr)",
+            lg: "repeat(12, 1fr)",
+          },
+          gap: 2,
+          mb: 3,
+        }}
+      >
+        <Box sx={{ gridColumn: { xs: "span 1", lg: "span 8" } }}>
           <CrmRecentDealsTable />
-        </Grid>
-        <Grid item xs={12} lg={4}>
+        </Box>
+        <Box sx={{ gridColumn: { xs: "span 1", lg: "span 4" } }}>
           <Stack spacing={2}>
             <CrmUpcomingTasks />
             <CrmActivitiesTimeline />
           </Stack>
-        </Grid>
-      </Grid>
+        </Box>
+      </Box>
 
       {/* Map row */}
-      <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={12}>
-          <CrmCustomerDistributionMap />
-        </Grid>
-      </Grid>
+      <Box sx={{ mb: 3 }}>
+        <CrmCustomerDistributionMap />
+      </Box>
 
       <Copyright sx={{ mt: 3, mb: 4 }} />
     </Box>

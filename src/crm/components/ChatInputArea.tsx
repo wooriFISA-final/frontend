@@ -60,13 +60,13 @@ export default function ChatInputArea({
     >
       <Paper
         elevation={0}
-        sx={(theme) => ({
+        sx={{
           width: "100%",
           borderRadius: 2,
           p: 1.5,
           bgcolor: "background.paper",
           boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
-        })}
+        }}
       >
         {/* 추천 프롬프트 */}
         {suggestedPrompts.length > 0 && (
@@ -85,15 +85,32 @@ export default function ChatInputArea({
                 label={prompt}
                 onClick={() => handlePromptClick(prompt)}
                 disabled={disabled}
-                sx={{
-                  bgcolor: "background.paper",
-                  color: "text.primary",
+                sx={(theme) => ({
+                  bgcolor: theme.palette.mode === "dark"
+                    ? "rgba(71, 85, 105, 0.5)"     // 다크: 더 밝은 슬레이트
+                    : "rgba(241, 245, 249, 1)",    // 라이트: 연한 회색
+                  color: theme.palette.mode === "dark"
+                    ? "#F1F5F9"                    // 다크: 거의 흰색 텍스트
+                    : "rgba(51, 65, 85, 0.85)",    // 라이트: 진한 회색 텍스트
+                  border: `1px solid ${theme.palette.mode === "dark"
+                    ? "rgba(148, 163, 184, 0.4)"  // 다크: 더 진한 테두리
+                    : "rgba(226, 232, 240, 1)"    // 라이트: 연한 테두리
+                    }`,
                   "&:hover": {
-                    bgcolor: disabled ? "background.paper" : "action.hover",
+                    bgcolor: disabled
+                      ? undefined
+                      : theme.palette.mode === "dark"
+                        ? "rgba(100, 116, 139, 0.6)"   // 다크: 호버 시 더 밝게
+                        : "rgba(226, 232, 240, 1)",    // 라이트: 호버 시 더 진하게
+                    borderColor: theme.palette.mode === "dark"
+                      ? "rgba(148, 163, 184, 0.6)"
+                      : "rgba(203, 213, 225, 1)",
                   },
                   cursor: disabled ? "not-allowed" : "pointer",
                   fontSize: "0.85rem",
-                }}
+                  fontWeight: 500,
+                  transition: "all 0.2s ease",
+                })}
               />
             ))}
           </Stack>

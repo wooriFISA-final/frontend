@@ -1,5 +1,3 @@
-import * as React from "react";
-import { useTheme } from "@mui/material/styles";
 import Box from "@mui/material/Box";
 import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
@@ -16,7 +14,6 @@ const leadSources = [
 ];
 
 export default function CrmLeadsBySourceChart() {
-  const theme = useTheme();
 
   return (
     <Card
@@ -61,12 +58,6 @@ export default function CrmLeadsBySourceChart() {
               },
             ]}
             height={280}
-            slotProps={{
-              legend: {
-                position: { vertical: "middle", horizontal: "right" },
-                direction: "column",
-              },
-            }}
             margin={{ right: 120 }}
           />
         </Box>

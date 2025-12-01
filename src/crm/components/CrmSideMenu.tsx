@@ -1,8 +1,8 @@
 // src/crm/components/CrmSideMenu.tsx
 import * as React from "react";
-import { styled } from "@mui/material/styles";
+
 import Avatar from "@mui/material/Avatar";
-import MuiDrawer, { drawerClasses } from "@mui/material/Drawer";
+
 import Box from "@mui/material/Box";
 import Divider from "@mui/material/Divider";
 import Stack from "@mui/material/Stack";
@@ -14,23 +14,6 @@ import { useAuth } from "../../auth/AuthContext";
 
 const drawerWidthExpanded = 240;
 const drawerWidthCollapsed = 80;
-
-const Drawer = styled(MuiDrawer)(({ theme }) => ({
-  width: drawerWidthExpanded,
-  flexShrink: 0,
-  boxSizing: "border-box",
-  mt: 10,
-  [`& .${drawerClasses.paper}`]: {
-    width: drawerWidthExpanded,
-    boxSizing: "border-box",
-    transition: "width 0.3s ease",
-  },
-  "&.collapsed": {
-    [`& .${drawerClasses.paper}`]: {
-      width: drawerWidthCollapsed,
-    },
-  },
-}));
 
 export default function CrmSideMenu() {
   const auth = useAuth();

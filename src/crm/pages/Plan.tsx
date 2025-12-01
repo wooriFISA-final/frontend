@@ -10,11 +10,16 @@ import ChatMessageBubble from "../components/ChatMessageBubble";
 import ChatInputArea from "../components/ChatInputArea";
 import { useAuth } from "../../auth/AuthContext";
 
+import PlanInputForm, { PlanFormData } from "../components/PlanInputForm";
+import PlanInputSummary from "../components/PlanInputSummary";
+
 interface Message {
   id: string;
   text: string;
   sender: "user" | "ai";
   timestamp: string;
+  isForm?: boolean;  // 폼 메시지 구분
+  formData?: PlanFormData;  // 제출된 폼 데이터
 }
 
 interface ConversationHistory {
@@ -26,11 +31,16 @@ interface ConversationHistory {
 const initialMessages: Message[] = [
   {
     id: "1",
-    text: "안녕하세요! AI 어시스턴트입니다. 무엇을 도와드릴까요?",
+    text: "", // 폼이므로 텍스트는 불필요
     sender: "ai",
-    timestamp: "12:00 PM",
+    timestamp: new Date().toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    }),
+    isForm: true,  // 폼 메시지임을 표시
   },
 ];
+
 
 const conversationHistory: ConversationHistory[] = [
   {
@@ -77,9 +87,23 @@ export default function Plan() {
   const displayEmail = storedEmail ?? "";
 
   const [messages, setMessages] = React.useState<Message[]>(initialMessages);
-  const [activeConversationId, setActiveConversationId] = React.useState(
-    "conv-1"
-  );
+
+  // 세션 ID 관리: localStorage에서 가져오거나 새로 생성
+  const [activeConversationId, setActiveConversationId] = React.useState(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("active_conversation_id");
+      if (stored) {
+        return stored;
+      }
+    }
+    // 없으면 새로 생성
+    const newId = `conv-${Date.now()}`;
+    if (typeof window !== "undefined") {
+      localStorage.setItem("active_conversation_id", newId);
+    }
+    return newId;
+  });
+
   const [isLoading, setIsLoading] = React.useState(false);
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
 
@@ -108,7 +132,7 @@ export default function Plan() {
 
     try {
       // 백엔드 API 호출
-      const response = await fetch(`${API_BASE_URL}/chat`, {
+      const response = await fetch(`${API_BASE_URL}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -156,9 +180,90 @@ export default function Plan() {
     }
   };
 
+  const handleFormSubmit = (formData: PlanFormData) => {
+    // 폼을 제거하고 일반 메시지로 전환
+    setMessages((prev) => prev.filter((msg) => !msg.isForm));
+
+    // 폼 데이터를 텍스트로 포맷팅 (백엔드 전송용)
+    const formattedMessage = `
+1. 초기 자산: ${formData.initialAsset}
+2. 주택 위치: ${formData.location}
+3. 희망 주택 가격: ${formData.targetPrice}
+4. 주택 유형: ${formData.housingType}
+5. 월 소득 배분 비율: ${formData.monthlyAllocation}
+6. 자산 배분 비율: ${formData.assetAllocation.deposit}:${formData.assetAllocation.savings}:${formData.assetAllocation.fund}
+    `.trim();
+
+    // 사용자 메시지 추가 (formData 포함)
+    const newUserMessage: Message = {
+      id: `msg-${Date.now()}`,
+      text: formattedMessage,
+      sender: "user",
+      timestamp: new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+      formData: formData,  // 요약 카드 렌더링용
+    };
+
+    setMessages((prev) => [...prev, newUserMessage]);
+    setIsLoading(true);
+
+    // 백엔드 API 호출
+    fetch(`${API_BASE_URL}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        message: formattedMessage,
+        session_id: activeConversationId,
+      }),
+    })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+      })
+      .then((data) => {
+        const aiResponse: Message = {
+          id: `msg-${Date.now() + 1}`,
+          text: data.response,
+          sender: "ai",
+          timestamp: new Date().toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+        };
+        setMessages((prev) => [...prev, aiResponse]);
+      })
+      .catch((error) => {
+        console.error("Error calling chatbot API:", error);
+        const errorMessage: Message = {
+          id: `msg-${Date.now() + 1}`,
+          text: "죄송합니다. 서버와의 연결에 문제가 발생했습니다. 백엔드 서버가 실행 중인지 확인해주세요.",
+          sender: "ai",
+          timestamp: new Date().toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+        };
+        setMessages((prev) => [...prev, errorMessage]);
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
+  };
+
   const handleNewChat = () => {
+    const newSessionId = `conv-${Date.now()}`;
     setMessages(initialMessages);
-    setActiveConversationId(`conv-new-${Date.now()}`);
+    setActiveConversationId(newSessionId);
+    // localStorage에 새 세션 ID 저장
+    if (typeof window !== "undefined") {
+      localStorage.setItem("active_conversation_id", newSessionId);
+    }
   };
 
   const handleSelectConversation = (id: string) => {
@@ -254,12 +359,20 @@ export default function Plan() {
               </Stack>
             )}
             {messages.map((msg) => (
-              <ChatMessageBubble
-                key={msg.id}
-                message={msg.text}
-                sender={msg.sender}
-                timestamp={msg.timestamp}
-              />
+              msg.isForm ? (
+                <PlanInputForm key={msg.id} onSubmit={handleFormSubmit} />
+              ) : msg.formData ? (
+                <Box key={msg.id} sx={{ display: "flex", justifyContent: "flex-end", mb: 2.5 }}>
+                  <PlanInputSummary data={msg.formData} />
+                </Box>
+              ) : (
+                <ChatMessageBubble
+                  key={msg.id}
+                  message={msg.text}
+                  sender={msg.sender}
+                  timestamp={msg.timestamp}
+                />
+              )
             ))}
             {isLoading && (
               <Box
