@@ -12,10 +12,17 @@ import axios from "axios";
 import { useAuth } from "../../auth/AuthContext"; // 🚨 컴파일 오류 해결을 위해 경로를 주석 처리합니다.
 
 
-// 🔹 Recharts (파이 차트만 유지)
+// 🔹 Recharts
 import {
   PieChart,
   Pie,
+  LineChart,  // 🆕
+  Line,  // 🆕
+  BarChart,  // 🆕
+  Bar,  // 🆕
+  XAxis,  // 🆕
+  YAxis,  // 🆕
+  CartesianGrid,  // 🆕
   Tooltip,
   ResponsiveContainer,
   Cell,
@@ -75,6 +82,26 @@ interface ReportDto {
   policy_changes?: PolicyChange[] | string | null;
   net_profit?: number | null;
   profit_rate?: number | null;
+
+  // 🆕 투자 그래프 데이터
+  trend_chart_json?: TrendChartData[] | string | null;
+  fund_comparison_json?: FundComparisonData[] | string | null;
+}
+
+// 🆕 투자 수익률 추이 데이터 (그래프 1)
+interface TrendChartData {
+  month: string;  // "2024-01"
+  deposit_rate: number;
+  savings_rate: number;
+  fund_rate: number;
+}
+
+// 🆕 펀드 상품별 손익 데이터 (그래프 2)
+interface FundComparisonData {
+  name: string;
+  principal: number;
+  valuation: number;
+  profit: number;
 }
 
 // ----------------------------------------------------
@@ -391,7 +418,56 @@ const SpendPieChart: React.FC<{ data: ChartDataArray[] }> = ({ data }) => {
   );
 };
 
+// ----------------------------------------------------
+// 4-1. [신규] 투자 수익률 추이 그래프 (LineChart)
+// ----------------------------------------------------
+const InvestmentTrendChart: React.FC<{ data: TrendChartData[] }> = ({ data }) => {
+  if (!data || data.length === 0) {
+    return <Typography variant="body2" color="text.secondary">데이터가 없습니다.</Typography>;
+  }
 
+  return (
+    <Box sx={{ width: "100%", height: 350 }}>
+      <ResponsiveContainer>
+        <LineChart data={data} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="month" />
+          <YAxis label={{ value: '수익률 (%)', angle: -90, position: 'insideLeft' }} />
+          <Tooltip />
+          <Legend />
+          <Line type="monotone" dataKey="deposit_rate" stroke="#8884d8" name="예금" strokeWidth={2} />
+          <Line type="monotone" dataKey="savings_rate" stroke="#82ca9d" name="적금" strokeWidth={2} />
+          <Line type="monotone" dataKey="fund_rate" stroke="#ffc658" name="펀드" strokeWidth={2} />
+        </LineChart>
+      </ResponsiveContainer>
+    </Box>
+  );
+};
+
+// ----------------------------------------------------
+// 4-2. [신규] 펀드 상품별 손익 비교 그래프 (BarChart)
+// ----------------------------------------------------
+const FundComparisonChart: React.FC<{ data: FundComparisonData[] }> = ({ data }) => {
+  if (!data || data.length === 0) {
+    return <Typography variant="body2" color="text.secondary">펀드 데이터가 없습니다.</Typography>;
+  }
+
+  return (
+    <Box sx={{ width: "100%", height: 350 }}>
+      <ResponsiveContainer>
+        <BarChart data={data} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="name" />
+          <YAxis label={{ value: '금액 (원)', angle: -90, position: 'insideLeft' }} />
+          <Tooltip formatter={(value: any) => `${Number(value).toLocaleString()} 원`} />
+          <Legend />
+          <Bar dataKey="principal" fill="#8884d8" name="투자 원금" />
+          <Bar dataKey="valuation" fill="#82ca9d" name="현재 평가액" />
+        </BarChart>
+      </ResponsiveContainer>
+    </Box>
+  );
+};
 // ----------------------------------------------------
 // 5. 리포트 카드 컴포넌트 (목록용)
 // ----------------------------------------------------
@@ -447,13 +523,13 @@ const ReportCard: React.FC<ReportCardProps> = ({ report, onView }) => {
             {report.cluster_nickname && (
               <Chip
                 label={report.cluster_nickname}
-                size="small"
+                size="medium"
                 sx={{
                   bgcolor: "#E3F2FD",
                   color: "#0078B9",
                   fontWeight: 700,
                   fontSize: "0.75rem",
-                  height: 24,
+                  height: 30,
                   borderRadius: "12px",
                 }}
               />
@@ -743,7 +819,7 @@ const ReportDetailView: React.FC<ReportDetailViewProps> = ({
           )}
 
           {(hasNetProfit || hasProfitRate) && (
-            <Stack direction="row" spacing={4}>
+            <Stack direction="row" spacing={4} sx={{ mb: 3 }}>
               {hasNetProfit && (
                 <Typography variant="body2">
                   • 순이익: {report.net_profit!.toLocaleString()} 원
@@ -756,6 +832,57 @@ const ReportDetailView: React.FC<ReportDetailViewProps> = ({
               )}
             </Stack>
           )}
+
+          {/* 🆕 그래프 1: 월별 수익률 추이 (더미 데이터 적용) */}
+          {(() => {
+            // 실제 데이터 파싱
+            const realTrendData = parseJsonField<TrendChartData[]>(report.trend_chart_json as any);
+
+            // 더미 데이터 (테스트용)
+            const dummyTrendData: TrendChartData[] = [
+              { month: "2024-05", deposit_rate: 2.5, savings_rate: 3.0, fund_rate: -1.2 },
+              { month: "2024-06", deposit_rate: 2.5, savings_rate: 3.1, fund_rate: 0.5 },
+              { month: "2024-07", deposit_rate: 2.5, savings_rate: 3.2, fund_rate: 2.8 },
+              { month: "2024-08", deposit_rate: 2.5, savings_rate: 3.3, fund_rate: 1.5 },
+              { month: "2024-09", deposit_rate: 2.5, savings_rate: 3.4, fund_rate: 4.2 },
+              { month: "2024-10", deposit_rate: 2.5, savings_rate: 3.5, fund_rate: 5.8 },
+            ];
+
+            const dataToUse = (realTrendData && realTrendData.length > 0) ? realTrendData : dummyTrendData;
+
+            return (
+              <Box sx={{ mb: 4 }}>
+                <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
+                  월별 투자 수익률 추이
+                </Typography>
+                <InvestmentTrendChart data={dataToUse} />
+              </Box>
+            );
+          })()}
+
+          {/* 🆕 그래프 2: 펀드 상품별 손익 비교 (더미 데이터 적용) */}
+          {(() => {
+            // 실제 데이터 파싱
+            const realFundData = parseJsonField<FundComparisonData[]>(report.fund_comparison_json as any);
+
+            // 더미 데이터 (테스트용)
+            const dummyFundData: FundComparisonData[] = [
+              { name: "삼성전자우", principal: 1000000, valuation: 1200000, profit: 200000 },
+              { name: "TIGER 미국나스닥100", principal: 500000, valuation: 550000, profit: 50000 },
+              { name: "KODEX 200", principal: 800000, valuation: 780000, profit: -20000 },
+            ];
+
+            const dataToUse = (realFundData && realFundData.length > 0) ? realFundData : dummyFundData;
+
+            return (
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
+                  이번 달 펀드 상품별 손익 비교
+                </Typography>
+                <FundComparisonChart data={dataToUse} />
+              </Box>
+            );
+          })()}
         </AnalysisBlock>
 
         {/* 3. 정책 및 환경 변동 사항 (🚨 FormattedText 적용) */}
@@ -799,7 +926,59 @@ export default function Reports() {
 
   // ✅ [수정] 리포트 목록을 불러오는 함수 (useCallback으로 메모이제이션)
   const fetchReports = React.useCallback(async () => {
-    // 🚨 1. API 요청 시작 시점 로깅
+    // 🚨 [테스트 모드] 백엔드 연결 없이 더미 데이터 사용
+    console.log("--- [테스트 모드] 더미 리포트 로드 ---");
+
+    const dummyReport: ReportDto = {
+      report_id: 999,
+      user_id: 1,
+      create_at: "2025-10-01T00:00:00", // 10월 리포트
+      consume_report: "이번 달 소비는 전반적으로 안정적입니다. 식비 지출이 소폭 증가했으나, 전체 예산 범위 내에서 관리되고 있습니다.",
+      cluster_nickname: "알뜰살뜰 저축왕",
+      consume_analysis_summary: {
+        latest_total_spend: "1,500,000",
+        total_change_diff: "+100,000원 (7.1%) 증가",
+        top_5_categories: [
+          "식비: 500,000원",
+          "주거/통신: 300,000원",
+          "쇼핑: 200,000원",
+          "교통: 150,000원",
+          "문화/여가: 100,000원"
+        ],
+        member_info: {}
+      },
+      spend_chart_json: [
+        { category: "식비", amount: 500000 },
+        { category: "주거/통신", amount: 300000 },
+        { category: "쇼핑", amount: 200000 },
+        { category: "교통", amount: 150000 },
+        { category: "문화/여가", amount: 100000 }
+      ],
+      change_analysis_report: "지난달 대비 총 자산이 2% 증가했습니다. 저축액 증가가 주요 원인입니다.",
+      profit_analysis_report: "투자 포트폴리오가 안정적인 수익률을 보이고 있습니다. 특히 펀드 상품의 수익률이 전월 대비 상승했습니다.",
+      net_profit: 250000,
+      profit_rate: 5.2,
+      trend_chart_json: [
+        { month: "2024-05", deposit_rate: 2.5, savings_rate: 3.0, fund_rate: -1.2 },
+        { month: "2024-06", deposit_rate: 2.5, savings_rate: 3.1, fund_rate: 0.5 },
+        { month: "2024-07", deposit_rate: 2.5, savings_rate: 3.2, fund_rate: 2.8 },
+        { month: "2024-08", deposit_rate: 2.5, savings_rate: 3.3, fund_rate: 1.5 },
+        { month: "2024-09", deposit_rate: 2.5, savings_rate: 3.4, fund_rate: 4.2 },
+        { month: "2024-10", deposit_rate: 2.5, savings_rate: 3.5, fund_rate: 5.8 },
+      ],
+      fund_comparison_json: [
+        { name: "삼성전자우", principal: 1000000, valuation: 1200000, profit: 200000 },
+        { name: "TIGER 미국나스닥100", principal: 500000, valuation: 550000, profit: 50000 },
+        { name: "KODEX 200", principal: 800000, valuation: 780000, profit: -20000 },
+      ],
+      policy_analysis_report: "이번 달에는 청년 주택 드림 청약 통장 관련 정책 변경이 있었습니다. 가입 조건이 완화되었으니 확인해보세요.",
+      threelines_summary: "1. 식비 지출이 가장 높았으나 예산 내에서 관리됨\n2. 펀드 수익률이 5.8%로 상승세 유지\n3. 저축 목표 달성을 위해 불필요한 쇼핑 자제 필요"
+    };
+
+    setReports([dummyReport]);
+    setLoading(false);
+
+    /* 🚨 백엔드 연결 코드 (일시 주석 처리)
     console.log("--- 리포트 목록 조회 시작 ---");
     console.log(`REPORTS_API_URL: ${REPORTS_API_URL}`);
     console.log(`Access Token 존재 여부: ${!!accessToken}`);
@@ -853,6 +1032,7 @@ export default function Reports() {
       console.log("--- 리포트 목록 조회 완료 ---");
       setLoading(false);
     }
+    */
   }, [accessToken]); // accessToken을 의존성 배열에 추가
 
   React.useEffect(() => {
