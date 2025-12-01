@@ -98,8 +98,6 @@ export default function Profile() {
   }
 
   const displayName = profile.user_name || "이름 미등록";
-  const avatarText =
-    displayName.length >= 2 ? displayName.slice(-2) : displayName || "?";
 
   return (
     <Box sx={{ width: "100%", px: 4, pt: 2 }}>
@@ -119,16 +117,14 @@ export default function Profile() {
             <Stack direction="row" alignItems="center" spacing={2}>
               {/* 아바타: 이름 끝 두 글자 */}
               <Avatar
+                src="/cocoa_cookie.png"  // 코코아맛 쿠키 이미지
+                alt={displayName}
                 sx={{
                   width: 56,
                   height: 56,
-                  bgcolor: "primary.main",
-                  fontSize: 20,
-                  fontWeight: 600,
+                  bgcolor: "#FFFFFF",  // 배경을 흰색으로
                 }}
-              >
-                {avatarText}
-              </Avatar>
+              />
 
               {/* 이름 + 이메일 */}
               <Box sx={{ flexGrow: 1 }}>

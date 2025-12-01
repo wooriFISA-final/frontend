@@ -23,16 +23,6 @@ export default function CrmSideMenu() {
   // 디버깅용
   console.log("CrmSideMenu auth:", auth);
 
-  // userName 기반 이니셜
-  const initials = React.useMemo(() => {
-    if (userName) {
-      const trimmed = userName.trim();
-      if (trimmed.length <= 2) return trimmed.toUpperCase();
-      return trimmed.slice(-2).toUpperCase();
-    }
-    return "U";
-  }, [userName]);
-
   const toggleSidebar = () => {
     setIsCollapsed((prev) => !prev);
   };
@@ -142,16 +132,14 @@ export default function CrmSideMenu() {
         >
           <Avatar
             sizes="small"
+            src="/cocoa_cookie.png"  // 코코아맛 쿠키 이미지
             alt={userName ?? "사용자"}
-            sx={(theme) => ({
+            sx={{
               width: 36,
               height: 36,
-              bgcolor: theme.palette.primary.main,
-              color: theme.palette.getContrastText(theme.palette.primary.main),
-            })}
-          >
-            {initials}
-          </Avatar>
+              bgcolor: "#FFFFFF",  // 배경을 흰색으로
+            }}
+          />
           {!isCollapsed && (
             <>
               <Box sx={{ mr: "auto" }}>

@@ -64,11 +64,12 @@ export default function ChatSidebar({
         {/* 사용자 프로필 영역 */}
         <Stack direction="row" spacing={2} alignItems="center" sx={{ px: 1 }}>
           <Avatar
-            src={userProfile.avatar}
+            src="/cocoa_cookie.png"  // 코코아맛 쿠키 이미지
+            alt={userProfile.name}
             sx={{
               width: 40,
               height: 40,
-              bgcolor: "#20C4F4",  // 우리은행 다크 블루
+              bgcolor: "#FFFFFF",  // 배경을 흰색으로
             }}
           >
             <PersonIcon sx={{ fontSize: 24 }} />
