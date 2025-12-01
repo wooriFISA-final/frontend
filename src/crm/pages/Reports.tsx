@@ -401,15 +401,16 @@ interface ReportCardProps {
 }
 
 const ReportCard: React.FC<ReportCardProps> = ({ report, onView }) => {
-  let createdDate = new Date(report.create_at);
+  // 🚨 create_at은 리포트 대상 월을 나타냄 (예: "2025-10-01" = 2025년 10월 리포트)
+  let reportTargetDate = new Date(report.create_at);
   // 날짜 파싱 실패 시 현재 시간으로 대체 (렌더링 에러 방지)
-  if (isNaN(createdDate.getTime())) {
-    createdDate = new Date();
+  if (isNaN(reportTargetDate.getTime())) {
+    reportTargetDate = new Date();
   }
 
-  // 🚨 리포트는 생성일 기준 지난 달 데이터를 분석함
-  const targetDate = new Date(createdDate);
-  targetDate.setMonth(targetDate.getMonth() - 1);
+  // 생성일은 리포트 대상 월의 다음 달 1일로 표시 (예: 10월 리포트 → 11월 1일 생성)
+  const actualCreatedDate = new Date(reportTargetDate);
+  actualCreatedDate.setMonth(actualCreatedDate.getMonth() + 1);
 
   // 🚨 3줄 요약에 마크다운 제거 적용
   const cleanSummary = parseMarkdownText(report.threelines_summary);
@@ -440,7 +441,7 @@ const ReportCard: React.FC<ReportCardProps> = ({ report, onView }) => {
               color="#0078B9" // PANTONE 3015 기반 색상 유지
               sx={{ textDecoration: "underline" }}
             >
-              {targetDate.getFullYear()}년 {targetDate.getMonth() + 1}월 통합 리포트
+              {reportTargetDate.getFullYear()}년 {reportTargetDate.getMonth() + 1}월 통합 리포트
             </Typography>
 
             {report.cluster_nickname && (
@@ -461,7 +462,7 @@ const ReportCard: React.FC<ReportCardProps> = ({ report, onView }) => {
 
           {/* 2. 생성일 (연한 색) */}
           <Typography variant="caption" sx={{ color: "#999999" }}>
-            생성일: {createdDate.toLocaleString()}
+            생성일: {actualCreatedDate.toLocaleString()}
           </Typography>
 
           {/* 3. 3줄 요약 (연한 글씨, 전체 표시) */}
@@ -495,15 +496,16 @@ const ReportDetailView: React.FC<ReportDetailViewProps> = ({
   report,
   onBack,
 }) => {
-  let createdDate = new Date(report.create_at);
+  // 🚨 create_at은 리포트 대상 월을 나타냄 (예: "2025-10-01" = 2025년 10월 리포트)
+  let reportTargetDate = new Date(report.create_at);
   // 날짜 파싱 실패 시 현재 시간으로 대체 (렌더링 에러 방지)
-  if (isNaN(createdDate.getTime())) {
-    createdDate = new Date();
+  if (isNaN(reportTargetDate.getTime())) {
+    reportTargetDate = new Date();
   }
 
-  // 🚨 리포트는 생성일 기준 지난 달 데이터를 분석함
-  const targetDate = new Date(createdDate);
-  targetDate.setMonth(targetDate.getMonth() - 1);
+  // 생성일은 리포트 대상 월의 다음 달 1일로 표시 (예: 10월 리포트 → 11월 1일 생성)
+  const actualCreatedDate = new Date(reportTargetDate);
+  actualCreatedDate.setMonth(actualCreatedDate.getMonth() + 1);
 
   // 🚨 JSON 필드 파싱 및 차트 데이터 준비
   const spendChart = parseJsonField<SpendChartJsonType>(
@@ -564,7 +566,7 @@ const ReportDetailView: React.FC<ReportDetailViewProps> = ({
       {/* 상단 제목/메타 정보 */}
       <Stack direction="row" alignItems="center" spacing={2} mb={1}>
         <Typography variant="h5" fontWeight={600} color="text.primary">
-          {targetDate.getFullYear()}년 {targetDate.getMonth() + 1}월 상세 통합 리포트
+          {reportTargetDate.getFullYear()}년 {reportTargetDate.getMonth() + 1}월 상세 통합 리포트
         </Typography>
         {report.cluster_nickname && (
           <Chip
@@ -588,7 +590,7 @@ const ReportDetailView: React.FC<ReportDetailViewProps> = ({
       </Stack>
 
       <Typography variant="body2" mb={3} color="text.secondary">
-        생성일: {createdDate.toLocaleString()}
+        생성일: {actualCreatedDate.toLocaleString()}
       </Typography>
 
       {/* ================= 상단 영역: 소비 관련 3개 카드 ================= */}
