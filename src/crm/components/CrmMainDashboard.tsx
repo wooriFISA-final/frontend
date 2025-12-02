@@ -92,8 +92,8 @@ export default function CrmMainDashboard() {
         </Stack>
 
         {/* 서비스 내용 */}
-        <Box sx={{ zIndex: 1, mt: 1 }}>
-          <Typography variant="body1" sx={{ color: "white", lineHeight: 1.8, fontSize: "1.05rem", maxWidth: "800px" }}>
+        <Box sx={{ zIndex: 1, mt: 1, mx: { xs: 2, md: 0 } }}>
+          <Typography variant="body1" sx={{ color: "white", lineHeight: 1.8, fontSize: "1.05rem" }}>
             우리집으로 가자는 <strong>주택 마련 목표 달성</strong>을 위해 설계된 <strong>맞춤형 금융 솔루션</strong>입니다.
             고객님의 목표에 도달하기 위한 <strong>최적의 저축 및 투자 실행 플랜</strong>을 수립해 드립니다.
             특히, 매월 제공되는 <strong>정기 리포트</strong>를 통해 사용자의 <strong>소비 패턴과 투자 실황</strong>을 정밀하게 분석하고, <strong>최신 주택 및 금융 정책 변동사항</strong>을 함께 제공하여,

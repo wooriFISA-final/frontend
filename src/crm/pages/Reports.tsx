@@ -34,7 +34,7 @@ import {
 // ----------------------------------------------------
 // 리포트 목록 조회용 (백엔드 서버)
 const REPORTS_API_URL = "http://localhost:8000/reports/";
-// 리포트 생성용 (Agent 서버 - Report 그래프)
+// 리포트 생성용 (Agent 서버)
 const AGENT_API_URL = "http://localhost:8080/chat/report";
 
 // [차트 데이터 타입]: Backend에서 JSON 문자열로 저장하는 배열 구조
@@ -94,6 +94,7 @@ interface TrendChartData {
   deposit_rate: number;
   savings_rate: number;
   fund_rate: number;
+  total_rate: number; // 🆕 총 수익률 추가
 }
 
 // 🆕 펀드 상품별 손익 데이터 (그래프 2)
@@ -103,6 +104,8 @@ interface FundComparisonData {
   valuation: number;
   profit: number;
 }
+
+
 
 // ----------------------------------------------------
 // 1-1. JSON 파싱 유틸 (string / object 둘 다 처리)
@@ -418,26 +421,101 @@ const SpendPieChart: React.FC<{ data: ChartDataArray[] }> = ({ data }) => {
   );
 };
 
+interface TrendChartData {
+  month: string;
+  deposit_balance: number;
+  savings_balance: number;
+  fund_balance: number;
+  total_asset: number;
+}
+
+// 🆕 펀드 상품별 수익률 데이터 (그래프 2)
+interface FundComparisonData {
+  name: string;
+  return_rate: number;
+}
+
 // ----------------------------------------------------
-// 4-1. [신규] 투자 수익률 추이 그래프 (LineChart)
+// 4-1. [신규] 월별 자산 추이 그래프 (LineChart - Log Scale)
 // ----------------------------------------------------
 const InvestmentTrendChart: React.FC<{ data: TrendChartData[] }> = ({ data }) => {
   if (!data || data.length === 0) {
     return <Typography variant="body2" color="text.secondary">데이터가 없습니다.</Typography>;
   }
 
+  // 📈 그래프 1: 월별 자산 추이 (Line Chart)
   return (
     <Box sx={{ width: "100%", height: 350 }}>
-      <ResponsiveContainer>
-        <LineChart data={data} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="month" />
-          <YAxis label={{ value: '수익률 (%)', angle: -90, position: 'insideLeft' }} />
-          <Tooltip />
-          <Legend />
-          <Line type="monotone" dataKey="deposit_rate" stroke="#8884d8" name="예금" strokeWidth={2} />
-          <Line type="monotone" dataKey="savings_rate" stroke="#82ca9d" name="적금" strokeWidth={2} />
-          <Line type="monotone" dataKey="fund_rate" stroke="#ffc658" name="펀드" strokeWidth={2} />
+      <ResponsiveContainer width="100%" height={300}>
+        <LineChart data={data} margin={{ top: 10, right: 30, left: 20, bottom: 5 }}>
+          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e0e0e0" />
+          <XAxis
+            dataKey="month"
+            tick={{ fontSize: 11, fill: "#666" }}
+            axisLine={{ stroke: "#e0e0e0" }}
+            tickLine={false}
+          />
+          {/* 
+            로그 스케일 적용: scale="log" 
+            domain={['auto', 'auto']}로 데이터 범위에 맞게 자동 조절
+          */}
+          <YAxis
+            scale="log"
+            domain={['auto', 'auto']}
+            tickFormatter={(value) => {
+              if (value >= 100000000) return `${(value / 100000000).toFixed(1)}억`;
+              if (value >= 10000) return `${(value / 10000).toFixed(0)}만`;
+              return value;
+            }}
+            tick={{ fontSize: 11, fill: "#666" }}
+            axisLine={false}
+            tickLine={false}
+            width={40}
+          />
+          <Tooltip
+            contentStyle={{ borderRadius: 8, border: "none", boxShadow: "0 2px 8px rgba(0,0,0,0.1)" }}
+            formatter={(value: number) => [`${value.toLocaleString()}원`, ""]}
+            labelStyle={{ color: "#333", fontWeight: 600, marginBottom: 4 }}
+          />
+          <Legend wrapperStyle={{ fontSize: 12, paddingTop: 10 }} />
+
+          <Line
+            type="monotone"
+            dataKey="deposit_balance"
+            name="예금 잔액"
+            stroke="#4FC3F7" // 부드러운 하늘색
+            strokeWidth={2}
+            dot={{ r: 3, strokeWidth: 0 }}
+            activeDot={{ r: 5 }}
+          />
+          <Line
+            type="monotone"
+            dataKey="savings_balance"
+            name="적금 잔액"
+            stroke="#5C6BC0" // 차분한 인디고
+            strokeWidth={2}
+            dot={{ r: 3, strokeWidth: 0 }}
+            activeDot={{ r: 5 }}
+          />
+          <Line
+            type="monotone"
+            dataKey="fund_balance"
+            name="펀드 잔액"
+            stroke="#1565C0" // 깊이 있는 파랑
+            strokeWidth={2}
+            dot={{ r: 3, strokeWidth: 0 }}
+            activeDot={{ r: 5 }}
+          />
+          <Line
+            type="monotone"
+            dataKey="total_asset"
+            name="총 자산"
+            stroke="#8E24AA" // 세련된 보라
+            strokeWidth={3}
+            connectNulls
+            dot={{ r: 4, strokeWidth: 0 }}
+            activeDot={{ r: 6 }}
+          />
         </LineChart>
       </ResponsiveContainer>
     </Box>
@@ -445,29 +523,66 @@ const InvestmentTrendChart: React.FC<{ data: TrendChartData[] }> = ({ data }) =>
 };
 
 // ----------------------------------------------------
-// 4-2. [신규] 펀드 상품별 손익 비교 그래프 (BarChart)
+// 4-2. [신규] 펀드 상품별 수익률 비교 그래프 (BarChart)
 // ----------------------------------------------------
+// 📊 그래프 2: 펀드 상품별 수익률 비교 (Bar Chart)
 const FundComparisonChart: React.FC<{ data: FundComparisonData[] }> = ({ data }) => {
   if (!data || data.length === 0) {
     return <Typography variant="body2" color="text.secondary">펀드 데이터가 없습니다.</Typography>;
   }
 
+  // 데이터 개수에 따라 높이 동적 조절
+  const chartHeight = Math.max(300, data.length * 60);
+
+  // 긴 이름 말줄임표 처리 함수
+  const truncateName = (name: string) => {
+    return name.length > 12 ? name.substring(0, 12) + "..." : name;
+  };
+
   return (
-    <Box sx={{ width: "100%", height: 350 }}>
-      <ResponsiveContainer>
-        <BarChart data={data} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="name" />
-          <YAxis label={{ value: '금액 (원)', angle: -90, position: 'insideLeft' }} />
-          <Tooltip formatter={(value: any) => `${Number(value).toLocaleString()} 원`} />
-          <Legend />
-          <Bar dataKey="principal" fill="#8884d8" name="투자 원금" />
-          <Bar dataKey="valuation" fill="#82ca9d" name="현재 평가액" />
+    <Box sx={{ width: "100%", height: chartHeight }}>
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart
+          data={data}
+          layout="vertical"
+          margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+        >
+          <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e0e0e0" />
+          <XAxis
+            type="number"
+            unit="%"
+            tick={{ fontSize: 11, fill: "#666" }}
+            axisLine={{ stroke: "#e0e0e0" }}
+          />
+          <YAxis
+            dataKey="name"
+            type="category"
+            width={140}
+            tick={{ fontSize: 11, fill: "#333" }}
+            tickFormatter={truncateName}
+            axisLine={false}
+            tickLine={false}
+          />
+          <Tooltip
+            contentStyle={{ borderRadius: 8, border: "none", boxShadow: "0 2px 8px rgba(0,0,0,0.1)" }}
+            formatter={(value: number) => [`${value}%`, "수익률"]}
+            labelStyle={{ color: "#333", fontWeight: 600 }}
+          />
+          <Legend wrapperStyle={{ fontSize: 12 }} />
+          <Bar
+            dataKey="return_rate"
+            name="수익률 (%)"
+            fill="#1565C0"
+            barSize={20}
+            radius={[0, 4, 4, 0]}
+          />
         </BarChart>
       </ResponsiveContainer>
     </Box>
   );
 };
+
+
 // ----------------------------------------------------
 // 5. 리포트 카드 컴포넌트 (목록용)
 // ----------------------------------------------------
@@ -804,7 +919,7 @@ const ReportDetailView: React.FC<ReportDetailViewProps> = ({
         </AnalysisBlock>
 
         {/* 2. 투자 수익 분석 */}
-        <AnalysisBlock title="투자 수익 분석">
+        <AnalysisBlock title={`투자 수익 분석 (${reportTargetDate.getFullYear()}년 ${reportTargetDate.getMonth() + 1}월 기준)`}>
           {report.profit_analysis_report ? (
             <Typography
               variant="body1"
@@ -833,55 +948,40 @@ const ReportDetailView: React.FC<ReportDetailViewProps> = ({
             </Stack>
           )}
 
-          {/* 🆕 그래프 1: 월별 수익률 추이 (더미 데이터 적용) */}
+          {/* 🆕 그래프 1: 월별 수익률 추이 */}
           {(() => {
             // 실제 데이터 파싱
             const realTrendData = parseJsonField<TrendChartData[]>(report.trend_chart_json as any);
 
-            // 더미 데이터 (테스트용)
-            const dummyTrendData: TrendChartData[] = [
-              { month: "2024-05", deposit_rate: 2.5, savings_rate: 3.0, fund_rate: -1.2 },
-              { month: "2024-06", deposit_rate: 2.5, savings_rate: 3.1, fund_rate: 0.5 },
-              { month: "2024-07", deposit_rate: 2.5, savings_rate: 3.2, fund_rate: 2.8 },
-              { month: "2024-08", deposit_rate: 2.5, savings_rate: 3.3, fund_rate: 1.5 },
-              { month: "2024-09", deposit_rate: 2.5, savings_rate: 3.4, fund_rate: 4.2 },
-              { month: "2024-10", deposit_rate: 2.5, savings_rate: 3.5, fund_rate: 5.8 },
-            ];
-
-            const dataToUse = (realTrendData && realTrendData.length > 0) ? realTrendData : dummyTrendData;
-
-            return (
-              <Box sx={{ mb: 4 }}>
-                <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
-                  월별 투자 수익률 추이
-                </Typography>
-                <InvestmentTrendChart data={dataToUse} />
-              </Box>
-            );
+            if (realTrendData && realTrendData.length > 0) {
+              return (
+                <Box sx={{ mb: 4 }}>
+                  <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
+                    월별 투자 수익률 추이
+                  </Typography>
+                  <InvestmentTrendChart data={realTrendData} />
+                </Box>
+              );
+            }
+            return null;
           })()}
 
-          {/* 🆕 그래프 2: 펀드 상품별 손익 비교 (더미 데이터 적용) */}
+          {/* 🆕 그래프 2: 펀드 상품별 손익 비교 */}
           {(() => {
             // 실제 데이터 파싱
             const realFundData = parseJsonField<FundComparisonData[]>(report.fund_comparison_json as any);
 
-            // 더미 데이터 (테스트용)
-            const dummyFundData: FundComparisonData[] = [
-              { name: "삼성전자우", principal: 1000000, valuation: 1200000, profit: 200000 },
-              { name: "TIGER 미국나스닥100", principal: 500000, valuation: 550000, profit: 50000 },
-              { name: "KODEX 200", principal: 800000, valuation: 780000, profit: -20000 },
-            ];
-
-            const dataToUse = (realFundData && realFundData.length > 0) ? realFundData : dummyFundData;
-
-            return (
-              <Box sx={{ mb: 2 }}>
-                <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
-                  이번 달 펀드 상품별 손익 비교
-                </Typography>
-                <FundComparisonChart data={dataToUse} />
-              </Box>
-            );
+            if (realFundData && realFundData.length > 0) {
+              return (
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
+                    이번 달 펀드 상품별 손익 비교
+                  </Typography>
+                  <FundComparisonChart data={realFundData} />
+                </Box>
+              );
+            }
+            return null;
           })()}
         </AnalysisBlock>
 
@@ -926,66 +1026,14 @@ export default function Reports() {
 
   // ✅ [수정] 리포트 목록을 불러오는 함수 (useCallback으로 메모이제이션)
   const fetchReports = React.useCallback(async () => {
-    // 🚨 [테스트 모드] 백엔드 연결 없이 더미 데이터 사용
-    console.log("--- [테스트 모드] 더미 리포트 로드 ---");
-
-    const dummyReport: ReportDto = {
-      report_id: 999,
-      user_id: 1,
-      create_at: "2025-10-01T00:00:00", // 10월 리포트
-      consume_report: "이번 달 소비는 전반적으로 안정적입니다. 식비 지출이 소폭 증가했으나, 전체 예산 범위 내에서 관리되고 있습니다.",
-      cluster_nickname: "알뜰살뜰 저축왕",
-      consume_analysis_summary: {
-        latest_total_spend: "1,500,000",
-        total_change_diff: "+100,000원 (7.1%) 증가",
-        top_5_categories: [
-          "식비: 500,000원",
-          "주거/통신: 300,000원",
-          "쇼핑: 200,000원",
-          "교통: 150,000원",
-          "문화/여가: 100,000원"
-        ],
-        member_info: {}
-      },
-      spend_chart_json: [
-        { category: "식비", amount: 500000 },
-        { category: "주거/통신", amount: 300000 },
-        { category: "쇼핑", amount: 200000 },
-        { category: "교통", amount: 150000 },
-        { category: "문화/여가", amount: 100000 }
-      ],
-      change_analysis_report: "지난달 대비 총 자산이 2% 증가했습니다. 저축액 증가가 주요 원인입니다.",
-      profit_analysis_report: "투자 포트폴리오가 안정적인 수익률을 보이고 있습니다. 특히 펀드 상품의 수익률이 전월 대비 상승했습니다.",
-      net_profit: 250000,
-      profit_rate: 5.2,
-      trend_chart_json: [
-        { month: "2024-05", deposit_rate: 2.5, savings_rate: 3.0, fund_rate: -1.2 },
-        { month: "2024-06", deposit_rate: 2.5, savings_rate: 3.1, fund_rate: 0.5 },
-        { month: "2024-07", deposit_rate: 2.5, savings_rate: 3.2, fund_rate: 2.8 },
-        { month: "2024-08", deposit_rate: 2.5, savings_rate: 3.3, fund_rate: 1.5 },
-        { month: "2024-09", deposit_rate: 2.5, savings_rate: 3.4, fund_rate: 4.2 },
-        { month: "2024-10", deposit_rate: 2.5, savings_rate: 3.5, fund_rate: 5.8 },
-      ],
-      fund_comparison_json: [
-        { name: "삼성전자우", principal: 1000000, valuation: 1200000, profit: 200000 },
-        { name: "TIGER 미국나스닥100", principal: 500000, valuation: 550000, profit: 50000 },
-        { name: "KODEX 200", principal: 800000, valuation: 780000, profit: -20000 },
-      ],
-      policy_analysis_report: "이번 달에는 청년 주택 드림 청약 통장 관련 정책 변경이 있었습니다. 가입 조건이 완화되었으니 확인해보세요.",
-      threelines_summary: "1. 식비 지출이 가장 높았으나 예산 내에서 관리됨\n2. 펀드 수익률이 5.8%로 상승세 유지\n3. 저축 목표 달성을 위해 불필요한 쇼핑 자제 필요"
-    };
-
-    setReports([dummyReport]);
-    setLoading(false);
-
-    /* 🚨 백엔드 연결 코드 (일시 주석 처리)
+    // 🚨 1. API 요청 시작 시점 로깅
     console.log("--- 리포트 목록 조회 시작 ---");
     console.log(`REPORTS_API_URL: ${REPORTS_API_URL}`);
     console.log(`Access Token 존재 여부: ${!!accessToken}`);
 
     if (!accessToken) {
       setLoading(false);
-      // return; // 실제 사용 시 주석 해제 필요
+      return;
     }
 
     setLoading(true);
@@ -1000,39 +1048,32 @@ export default function Reports() {
 
       const res = await axios.get<ReportDto[]>(REPORTS_API_URL, {
         timeout: 35000,
-        headers: headers, // 로깅된 헤더 사용
+        headers,
       });
 
-      // 🚨 3. 요청 성공 시 데이터 로깅
-      console.log("리포트 목록 조회 성공. 데이터 개수:", res.data.length);
+      // 🚨 3. 응답 데이터 로깅
+      console.log("✅ 리포트 목록 조회 성공:", res.data);
       setReports(res.data);
     } catch (err: any) {
-      // 🚨 4. 요청 실패 시 상세 오류 정보 로깅
-      console.error("--- 리포트 목록 조회 실패 상세 ---");
+      // 🚨 4. 에러 상세 로깅
+      console.error("❌ 리포트 목록 조회 실패:", err);
 
       if (err.response) {
-        // HTTP 상태 코드가 2xx 범위를 벗어난 경우 (예: 404, 500)
-        console.error("응답 오류 상태 코드:", err.response.status);
+        console.error("응답 상태 코드:", err.response.status);
         console.error("응답 데이터:", err.response.data);
-        setError(`[HTTP Error ${err.response.status}] 리포트 목록을 불러오는 중 오류가 발생했습니다. (백엔드 확인 필요)`);
+        setError(
+          `[HTTP Error ${err.response.status}] 리포트 목록을 불러오는 중 오류가 발생했습니다. (백엔드 확인 필요)`
+        );
       } else if (err.request) {
-        // 요청이 만들어졌으나 응답을 받지 못한 경우 (예: 네트워크 오류, CORS 문제, 백엔드 서버 다운)
-        console.error("요청 오류: 응답을 받지 못함. 서버 또는 네트워크 상태 확인 필요.");
-        setError("네트워크 오류 또는 서버 응답 없음. 서버가 실행 중인지 확인하세요.");
+        console.error("응답 없음 (네트워크 문제 또는 서버 다운):", err.request);
+        setError("서버로부터 응답이 없습니다. 백엔드 서버가 실행 중인지 확인해주세요.");
       } else {
-        // 요청 설정 중 오류가 발생한 경우
-        console.error("Axios 설정 오류:", err.message);
-        setError(`클라이언트 오류: ${err.message}`);
+        console.error("요청 설정 중 오류:", err.message);
+        setError(`요청 중 오류 발생: ${err.message}`);
       }
-
-      // 원본 콘솔 출력도 유지
-      console.error("원본 오류 객체:", err);
     } finally {
-      // 🚨 5. 요청 완료 시점 로깅
-      console.log("--- 리포트 목록 조회 완료 ---");
       setLoading(false);
     }
-    */
   }, [accessToken]); // accessToken을 의존성 배열에 추가
 
   React.useEffect(() => {
@@ -1049,7 +1090,8 @@ export default function Reports() {
     // ✅ [수정] Agent 서버 스펙에 맞춘 요청 본문
     const requestData = {
       message: `${targetUserId}번 사용자의 ${targetYearMonth}월 레포트를 작성해줘`,
-      session_id: "default-session",
+      session_id: `report-${Date.now()}`,
+      graph: "report",  // 🆕 report 그래프 지정
     };
 
     if (!window.confirm(`${targetUserId}번 사용자의 ${targetYearMonth}월 리포트를 생성하시겠습니까?`)) {
@@ -1126,86 +1168,108 @@ export default function Reports() {
     setError(null);
   };
 
-  // ✅ 상세 보기 모드
-  if (selectedReport) {
-    return <ReportDetailView report={selectedReport} onBack={handleBack} />;
+  if (loading && reports.length === 0) {
+    return (
+      <Box sx={{ p: 4, textAlign: "center" }}>
+        <Typography>리포트 목록을 불러오는 중...</Typography>
+      </Box>
+    );
   }
 
-  // ✅ 목록 보기 모드
+  if (selectedReport) {
+    return (
+      <ReportDetailView
+        report={selectedReport}
+        onBack={() => setSelectedReport(null)}
+      />
+    );
+  }
+
   return (
     <Box
       sx={{
         width: "100%",
         maxWidth: { sm: "100%", md: "1700px" },
         mx: "auto",
-        bgcolor: "background.paper",
+        px: { xs: 2, md: 3 },
+        py: { xs: 3, md: 4 },
       }}
     >
       <Stack
         direction="row"
         justifyContent="space-between"
         alignItems="center"
-        sx={{ mb: 4, p: 2 }}
+        sx={{ mb: 4 }}
       >
-        <Typography
-          variant="h4"
-          component="h1"
-          sx={{ color: "text.primary", fontWeight: 600 }}
-        >
-          Reports Overview
+        <Typography variant="h5" fontWeight={700} color="text.primary">
+          월간 리포트 목록
         </Typography>
-        <Button
-          startIcon={<DownloadRoundedIcon />}
-          // ✅ [수정] onClick 핸들러 연결
-          onClick={handleCreateReport}
-          disabled={loading} // 요청 중 버튼 비활성화
-          sx={{
-            textTransform: "none",
-            borderRadius: 2,
-            px: 2.5,
-            py: 1,
-            ...GradientButtonStyle,
-            // 요청 중일 때 스타일 변경
-            ...(loading && { opacity: 0.7, pointerEvents: 'none' }),
-          }}
-        >
-          {/* ✅ [수정] 버튼 텍스트 변경 */}
-          {loading ? "작성 요청 중..." : "2025년 10월 리포트 작성하기"}
-        </Button>
+        <Stack direction="row" spacing={2}>
+          <Button
+            variant="contained"
+            sx={{
+              background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+              color: "#FFFFFF",
+              fontWeight: 600,
+              textTransform: "none",
+              borderRadius: 2,
+              boxShadow: "0 2px 8px rgba(102, 126, 234, 0.25)",
+              "&:hover": {
+                background: "linear-gradient(135deg, #5568d3 0%, #63408a 100%)",
+                boxShadow: "0 4px 12px rgba(102, 126, 234, 0.35)",
+              }
+            }}
+            onClick={handleCreateReport}
+            disabled={loading}
+          >
+            📊 2025년 10월 리포트 생성하기
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={<DownloadRoundedIcon />}
+            sx={{ ...GradientButtonStyle, textTransform: "none", borderRadius: 2 }}
+            onClick={fetchReports}
+          >
+            목록 새로고침
+          </Button>
+        </Stack>
       </Stack>
 
-      {loading && (
-        <Box sx={{ p: 3 }}>
-          <Typography>리포트 데이터를 불러오는 중입니다...</Typography>
-        </Box>
-      )}
-
       {error && (
-        <Box sx={{ p: 3 }}>
-          <Typography color="error">{error}</Typography>
-        </Box>
+        <Typography color="error" sx={{ mb: 3 }}>
+          {error}
+        </Typography>
       )}
 
-      {!loading && !error && (
+      {reports.length === 0 ? (
+        <Box
+          sx={{
+            textAlign: "center",
+            py: 8,
+            bgcolor: "background.paper",
+            borderRadius: 2,
+            boxShadow: "0px 4px 20px rgba(0, 0, 0, 0.05)",
+          }}
+        >
+          <Typography variant="subtitle1" color="text.secondary" mb={2}>
+            생성된 리포트가 없습니다.
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            AI 에이전트에게 새로운 리포트 생성을 요청해보세요!
+          </Typography>
+        </Box>
+      ) : (
         <Box
           sx={{
             display: "grid",
             gridTemplateColumns: {
-              xs: "repeat(1, minmax(0, 1fr))",
-              sm: "repeat(2, minmax(0, 1fr))",
-              md: "repeat(3, minmax(0, 1fr))",
-              lg: "repeat(4, minmax(0, 1fr))",
+              xs: "1fr",
+              md: "repeat(2, 1fr)",
+              lg: "repeat(3, 1fr)",
             },
             gap: 3,
-            mb: 4,
-            p: 2,
           }}
         >
-          {reports.length === 0 && (
-            <Typography sx={{ p: 2 }}>
-              아직 생성된 리포트가 없습니다.
-            </Typography>
-          )}
           {reports.map((report) => (
             <ReportCard
               key={report.report_id}
