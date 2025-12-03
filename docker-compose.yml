@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ${DOCKER_USERNAME}/woorifisa-frontend:latest
+    container_name: woorifisa-frontend
+    ports:
+      - "80:80"
+    environment:
+      - VITE_BACKEND_URL=${VITE_BACKEND_URL:-http://localhost:8000}
+      - VITE_AGENT_URL=${VITE_AGENT_URL:-http://localhost:8080}
+    restart: unless-stopped
+    networks:
+      - woorifisa-network
+
+networks:
+  woorifisa-network:
+    driver: bridge

@@ -27,8 +27,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   // 현재 사용자 정보 불러오기
   const fetchCurrentUser = async (token: string) => {
+    const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
+
     try {
-      const res = await fetch("http://localhost:8000/members/me", {
+      const res = await fetch(`${BACKEND_URL}/members/me`, {
         headers: {
           Authorization: `Bearer ${token}`,
           Accept: "application/json",

@@ -1,0 +1,26 @@
+# Backend .env 파일 예제
+# 이 파일을 Backend 프로젝트 루트에 .env로 저장하세요
+
+# ============================================
+# CORS 설정
+# ============================================
+# 쉼표로 구분하여 여러 origin 추가
+CORS_ORIGINS=https://woorizip.info,https://www.woorizip.info,http://localhost:3000,http://localhost:5173
+
+# ============================================
+# 데이터베이스 설정
+# ============================================
+# DATABASE_URL=postgresql://user:password@localhost/dbname
+# 또는
+# DATABASE_URL=mysql://user:password@localhost/dbname
+
+# ============================================
+# 환경 설정
+# ============================================
+ENV=production
+
+# ============================================
+# 기타 설정
+# ============================================
+# SECRET_KEY=your-secret-key-here
+# ACCESS_TOKEN_EXPIRE_MINUTES=30

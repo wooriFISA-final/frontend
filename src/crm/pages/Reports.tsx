@@ -33,9 +33,12 @@ import {
 // 1. API 설정 + 타입 정의
 // ----------------------------------------------------
 // 리포트 목록 조회용 (백엔드 서버)
-const REPORTS_API_URL = "http://localhost:8000/reports/";
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
+const REPORTS_API_URL = `${BACKEND_URL}/reports/`;
+
 // 리포트 생성용 (Agent 서버)
-const AGENT_API_URL = "http://localhost:8080/chat/report";
+const AGENT_URL = import.meta.env.VITE_AGENT_URL || "http://localhost:8080";
+const AGENT_API_URL = `${AGENT_URL}/chat/report`;
 
 // [차트 데이터 타입]: Backend에서 JSON 문자열로 저장하는 배열 구조
 interface ChartDataArray {
