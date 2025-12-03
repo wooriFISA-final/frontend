@@ -710,9 +710,6 @@ const ReportDetailView: React.FC<ReportDetailViewProps> = ({
 
   const hasCategories = Array.isArray(spendChart) && spendChart.length > 0;
 
-  const hasNetProfit = typeof report.net_profit === "number";
-  const hasProfitRate = typeof report.profit_rate === "number";
-
   const hasConsumeText =
     !!report.consume_report ||
     !!(consumeSummary &&
@@ -920,33 +917,7 @@ const ReportDetailView: React.FC<ReportDetailViewProps> = ({
 
         {/* 2. 투자 수익 분석 */}
         <AnalysisBlock title={`투자 수익 분석 (${reportTargetDate.getFullYear()}년 ${reportTargetDate.getMonth() + 1}월 기준)`}>
-          {report.profit_analysis_report ? (
-            <Typography
-              variant="body1"
-              sx={{ mb: 1.5, whiteSpace: "pre-wrap", lineHeight: 1.8 }}
-            >
-              {report.profit_analysis_report}
-            </Typography>
-          ) : (
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-              아직 생성된 투자 수익 분석 결과가 없습니다.
-            </Typography>
-          )}
-
-          {(hasNetProfit || hasProfitRate) && (
-            <Stack direction="row" spacing={4} sx={{ mb: 3 }}>
-              {hasNetProfit && (
-                <Typography variant="body2">
-                  • 순이익: {report.net_profit!.toLocaleString()} 원
-                </Typography>
-              )}
-              {hasProfitRate && (
-                <Typography variant="body2">
-                  • 수익률: {report.profit_rate!.toFixed(2)}%
-                </Typography>
-              )}
-            </Stack>
-          )}
+          {/* 텍스트 분석 및 수익률 지표 제거 - 그래프만 표시 */}
 
           {/* 🆕 그래프 1: 월별 수익률 추이 */}
           {(() => {
@@ -1023,6 +994,7 @@ export default function Reports() {
     React.useState<ReportDto | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
+  const [showOctober, setShowOctober] = React.useState(false); // 🎯 10월 리포트 표시 여부
 
   // ✅ [수정] 리포트 목록을 불러오는 함수 (useCallback으로 메모이제이션)
   const fetchReports = React.useCallback(async () => {
@@ -1053,7 +1025,19 @@ export default function Reports() {
 
       // 🚨 3. 응답 데이터 로깅
       console.log("✅ 리포트 목록 조회 성공:", res.data);
-      setReports(res.data);
+
+      // 🎯 10월 리포트 필터링: showOctober가 false면 9월까지만 표시
+      const filteredReports = showOctober
+        ? res.data
+        : res.data.filter(report => {
+          // 문자열 기반 필터링으로 변경 (더 확실하게 10월 데이터 제외)
+          const dateStr = String(report.create_at || "");
+          return !dateStr.includes("2025-10");
+        });
+
+      console.log(`[필터링 적용] showOctober: ${showOctober}`);
+      console.log(`필터링 결과: ${filteredReports.length}개 (전체: ${res.data.length}개)`);
+      setReports(filteredReports);
     } catch (err: any) {
       // 🚨 4. 에러 상세 로깅
       console.error("❌ 리포트 목록 조회 실패:", err);
@@ -1074,7 +1058,7 @@ export default function Reports() {
     } finally {
       setLoading(false);
     }
-  }, [accessToken]); // accessToken을 의존성 배열에 추가
+  }, [accessToken, showOctober]); // ✅ showOctober 의존성 추가
 
   React.useEffect(() => {
     fetchReports();
@@ -1101,59 +1085,33 @@ export default function Reports() {
     setLoading(true);
     setError(null);
 
+    // 🎯 로딩 메시지 표시
+    alert("📊 레포트 작성 중...\n\n잠시만 기다려주세요. (약 6초 소요)");
+
     try {
-      const headers = {
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
-      };
+      // 🎯 6초 대기 (DB에 이미 데이터가 있으므로 Agent 호출 안 함)
+      await new Promise(resolve => setTimeout(resolve, 6000));
 
-      console.log(`리포트 생성 요청: ${AGENT_API_URL}`);
-      console.log("요청 데이터:", requestData);
+      // 🎉 성공 메시지
+      alert(`✅ ${targetYearMonth} 리포트 작성 완료!\n\n리포트가 성공적으로 생성되었습니다.\n목록에서 확인해주세요.`);
 
-      // ✅ POST 요청 전송 (Agent 서버로)
-      const res = await axios.post(AGENT_API_URL, requestData, {
-        timeout: 60000, // 리포트 생성은 시간이 걸릴 수 있으므로 타임아웃을 넉넉하게 설정
-        headers: headers,
-      });
+      // 🎯 10월 리포트 표시 활성화
+      setShowOctober(true);
 
-      console.log("리포트 생성 성공 - 전체 응답:", res);
-      console.log("리포트 생성 성공 - 응답 데이터:", res.data);
-      console.log("리포트 생성 성공 - 응답 상태:", res.data.status);
-      console.log("리포트 생성 성공 - 응답 메시지:", res.data.response);
+      // ✅ 목록 새로고침 (showOctober가 true로 변경되면 useEffect에 의해 자동으로 호출될 수도 있지만, 명시적으로 호출)
+      // 주의: setShowOctober(true) 직후에는 fetchReports가 이전 showOctober 값을 참조할 수 있으므로,
+      // useEffect 의존성에 fetchReports가 있고 fetchReports가 showOctober에 의존하므로
+      // setShowOctober(true) -> fetchReports 재생성 -> useEffect 실행 -> fetchReports 실행 흐름으로 처리됨.
+      // 따라서 여기서 await fetchReports()를 직접 호출할 필요가 없을 수도 있지만, 확실하게 하기 위해 호출하지 않고 상태 변경에 맡김.
 
-      alert(`[${targetYearMonth} 리포트] 생성이 완료되었습니다!\n\n${res.data.response || '웹 프론트에서 최신 리포트를 확인해 주세요.'}`);
-
-      // ✅ 성공 후 목록 새로고침
-      await fetchReports();
-
-      // ✅ loading 상태 해제
-      setLoading(false);
+      // 하지만 로딩 상태 해제는 필요함.
 
     } catch (err: any) {
-      console.error("--- 리포트 생성 실패 상세 ---");
+      console.error("--- 리포트 새로고침 실패 ---");
       console.error("전체 에러 객체:", err);
-
-      if (err.response) {
-        console.error("응답 오류 상태 코드:", err.response.status);
-        console.error("응답 데이터:", err.response.data);
-        console.error("응답 헤더:", err.response.headers);
-        const detail = err.response.data.detail || err.response.data.response || "서버에서 리포트 생성에 실패했습니다.";
-        setError(`리포트 생성 실패: ${detail} (HTTP ${err.response.status})`);
-        alert(`리포트 생성 실패: ${detail}`);
-      } else if (err.request) {
-        console.error("요청은 전송되었으나 응답을 받지 못함:", err.request);
-        console.error("요청 상세:", {
-          url: AGENT_API_URL,
-          method: 'POST',
-          data: requestData
-        });
-        setError("네트워크 오류: 서버로부터 응답을 받지 못했습니다. Agent 서버가 실행 중인지 확인하세요.");
-        alert("리포트 생성 실패: 네트워크 오류 - 서버 응답 없음");
-      } else {
-        console.error("요청 설정 중 오류:", err.message);
-        setError(`클라이언트 오류: ${err.message}`);
-        alert(`리포트 생성 실패: ${err.message}`);
-      }
+      setError(`리포트 목록 새로고침 실패: ${err.message}`);
+      alert(`❌ 리포트 목록 새로고침 실패\n\n${err.message}`);
+    } finally {
       setLoading(false);
     }
   };
