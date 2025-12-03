@@ -48,10 +48,15 @@ type SpendChartJsonType = ChartDataArray[];
 
 // [소비 요약 JSON 구조]: 최신 백엔드 키 반영
 interface NewConsumeAnalysisSummary {
-  latest_total_spend: string; // "5,400,000"
-  total_change_diff: string; // "+600,000원 (12.50%) 변동"
-  top_5_categories: string[]; // Top 5 카테고리 리스트
-  member_info: any;
+  latest_total_spend?: number | string;
+  previous_total_spend?: number | string;
+  spend_diff?: number | string;
+  change_rate?: number | string;
+  total_change_diff?: string;
+  top_5_categories?: string[];
+  top_5_amounts?: number[];
+  consumption_advice?: string; // 🆕 소비 조언 추가
+  member_info?: any;
 }
 
 // [정책 변경 JSON 구조]
@@ -436,18 +441,37 @@ interface FundComparisonData {
 }
 
 // ----------------------------------------------------
-// 4-1. [신규] 월별 자산 추이 그래프 (LineChart - Log Scale)
+// 4-1. [수정] 월별 자산 추이 그래프 (LineChart - Dual Y-Axis)
 // ----------------------------------------------------
 const InvestmentTrendChart: React.FC<{ data: TrendChartData[] }> = ({ data }) => {
   if (!data || data.length === 0) {
     return <Typography variant="body2" color="text.secondary">데이터가 없습니다.</Typography>;
   }
 
+  // 데이터 구조를 확인합니다. 이전에 total_asset이 없었으므로,
+  // total_asset을 명시적으로 계산하여 데이터 구조를 개선합니다.
+  const processedData = data.map(item => ({
+    ...item,
+    // total_asset 계산: 예금 + 적금 + 펀드
+    total_asset: item.deposit_balance + item.savings_balance + item.fund_balance,
+  }));
+
+  // 펀드 잔액만 추출하여 최소/최대값 확인
+  const fundValues = processedData.map(item => item.fund_balance).filter(v => v !== undefined && v !== null);
+  const minFund = Math.min(...fundValues);
+  const maxFund = Math.max(...fundValues);
+
+  // 펀드 잔액 Y축의 domain 설정: 최소값보다 약간 작게, 최대값보다 약간 크게 설정하여 변동성을 극대화
+  // 예: 최소값 6억이면 5억 5천만부터 시작하도록 설정
+  const fundDomainMin = minFund > 10000000 ? Math.max(0, minFund * 0.95 - 10000000) : 'auto';
+  const fundDomainMax = maxFund * 1.05 + 10000000;
+
+
   // 📈 그래프 1: 월별 자산 추이 (Line Chart)
   return (
     <Box sx={{ width: "100%", height: 350 }}>
       <ResponsiveContainer width="100%" height={300}>
-        <LineChart data={data} margin={{ top: 10, right: 30, left: 20, bottom: 5 }}>
+        <LineChart data={processedData} margin={{ top: 10, right: 30, left: 20, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e0e0e0" />
           <XAxis
             dataKey="month"
@@ -455,11 +479,10 @@ const InvestmentTrendChart: React.FC<{ data: TrendChartData[] }> = ({ data }) =>
             axisLine={{ stroke: "#e0e0e0" }}
             tickLine={false}
           />
-          {/* 
-            로그 스케일 적용: scale="log" 
-            domain={['auto', 'auto']}로 데이터 범위에 맞게 자동 조절
-          */}
+          
+          {/* Y축 1 (왼쪽): 예금, 적금, 총 자산용 - 로그 스케일 유지 */}
           <YAxis
+            yAxisId="left" // ID 설정
             scale="log"
             domain={['auto', 'auto']}
             tickFormatter={(value) => {
@@ -472,32 +495,67 @@ const InvestmentTrendChart: React.FC<{ data: TrendChartData[] }> = ({ data }) =>
             tickLine={false}
             width={40}
           />
+
+          {/* Y축 2 (오른쪽): 펀드 잔액용 - 선형 스케일 + 변동성 극대화 Domain */}
+          <YAxis
+            yAxisId="right" // ID 설정
+            orientation="right" // 오른쪽 배치
+            domain={[fundDomainMin, fundDomainMax]} // 변동성 부각을 위한 Domain 설정
+            tickFormatter={(value) => {
+              if (value >= 100000000) return `${(value / 100000000).toFixed(1)}억`;
+              if (value >= 10000) return `${(value / 10000).toFixed(0)}만`;
+              return value;
+            }}
+            tick={{ fontSize: 11, fill: "#1565C0" }} // 펀드 라인과 동일한 색상
+            axisLine={false}
+            tickLine={false}
+            width={40}
+          />
+
           <Tooltip
             contentStyle={{ borderRadius: 8, border: "none", boxShadow: "0 2px 8px rgba(0,0,0,0.1)" }}
-            formatter={(value: number) => [`${value.toLocaleString()}원`, ""]}
+            formatter={(value: number, name: string) => [`${value.toLocaleString()}원`, name]}
             labelStyle={{ color: "#333", fontWeight: 600, marginBottom: 4 }}
           />
           <Legend wrapperStyle={{ fontSize: 12, paddingTop: 10 }} />
 
+          {/* 예금 잔액 (왼쪽 Y축 사용) */}
           <Line
+            yAxisId="left" 
             type="monotone"
             dataKey="deposit_balance"
             name="예금 잔액"
-            stroke="#4FC3F7" // 부드러운 하늘색
+            stroke="#4FC3F7" 
             strokeWidth={2}
             dot={{ r: 3, strokeWidth: 0 }}
             activeDot={{ r: 5 }}
           />
+          {/* 적금 잔액 (왼쪽 Y축 사용) */}
           <Line
+            yAxisId="left" 
             type="monotone"
             dataKey="savings_balance"
             name="적금 잔액"
-            stroke="#5C6BC0" // 차분한 인디고
+            stroke="#5C6BC0" 
             strokeWidth={2}
             dot={{ r: 3, strokeWidth: 0 }}
             activeDot={{ r: 5 }}
           />
+          {/* 총 자산 (왼쪽 Y축 사용) */}
           <Line
+            yAxisId="left"
+            type="monotone"
+            dataKey="total_asset"
+            name="총 자산"
+            stroke="#8E24AA"
+            strokeWidth={3}
+            connectNulls
+            dot={{ r: 4, strokeWidth: 0 }}
+            activeDot={{ r: 6 }}
+          />
+          {/* 펀드 잔액 (오른쪽 Y축 사용) - 변동성 극대화 */}
+          <Line
+            yAxisId="right" // 오른쪽 Y축 지정
             type="monotone"
             dataKey="fund_balance"
             name="펀드 잔액"
@@ -505,16 +563,6 @@ const InvestmentTrendChart: React.FC<{ data: TrendChartData[] }> = ({ data }) =>
             strokeWidth={2}
             dot={{ r: 3, strokeWidth: 0 }}
             activeDot={{ r: 5 }}
-          />
-          <Line
-            type="monotone"
-            dataKey="total_asset"
-            name="총 자산"
-            stroke="#8E24AA" // 세련된 보라
-            strokeWidth={3}
-            connectNulls
-            dot={{ r: 4, strokeWidth: 0 }}
-            activeDot={{ r: 6 }}
           />
         </LineChart>
       </ResponsiveContainer>
@@ -870,6 +918,13 @@ const ReportDetailView: React.FC<ReportDetailViewProps> = ({
                         {consumeSummary.top_5_categories.join(", ")}
                       </Typography>
                     )}
+
+                  {/* 🆕 소비 조언 추가 (줄글 형태) */}
+                  {consumeSummary.consumption_advice && (
+                    <Typography variant="body2" sx={{ mt: 2, lineHeight: 1.6 }}>
+                      💡 {consumeSummary.consumption_advice}
+                    </Typography>
+                  )}
                 </Box>
               )}
             </>
@@ -1086,7 +1141,7 @@ export default function Reports() {
     setError(null);
 
     // 🎯 로딩 메시지 표시
-    alert("📊 레포트 작성 중...\n\n잠시만 기다려주세요. (약 6초 소요)");
+    alert("📊 레포트 작성 중...\n\n잠시만 기다려주세요. (약 2분 소요)");
 
     try {
       // 🎯 6초 대기 (DB에 이미 데이터가 있으므로 Agent 호출 안 함)
