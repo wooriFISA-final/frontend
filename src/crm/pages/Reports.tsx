@@ -9,7 +9,7 @@ import CardContent from "@mui/material/CardContent";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import Chip from "@mui/material/Chip";
 import axios from "axios";
-import { useAuth } from "../../auth/AuthContext"; // 🚨 컴파일 오류 해결을 위해 경로를 주석 처리합니다.
+import { useAuth } from "../../auth/AuthContext";
 
 
 // 🔹 Recharts
@@ -95,19 +95,17 @@ interface ReportDto {
 
 // 🆕 투자 수익률 추이 데이터 (그래프 1)
 interface TrendChartData {
-  month: string;  // "2024-01"
-  deposit_rate: number;
-  savings_rate: number;
-  fund_rate: number;
-  total_rate: number; // 🆕 총 수익률 추가
+  month: string;
+  deposit_balance: number;
+  savings_balance: number;
+  fund_balance: number;
+  total_asset: number;
 }
 
-// 🆕 펀드 상품별 손익 데이터 (그래프 2)
+// 🆕 펀드 상품별 수익률 데이터 (그래프 2)
 interface FundComparisonData {
   name: string;
-  principal: number;
-  valuation: number;
-  profit: number;
+  return_rate: number;
 }
 
 
@@ -426,19 +424,7 @@ const SpendPieChart: React.FC<{ data: ChartDataArray[] }> = ({ data }) => {
   );
 };
 
-interface TrendChartData {
-  month: string;
-  deposit_balance: number;
-  savings_balance: number;
-  fund_balance: number;
-  total_asset: number;
-}
 
-// 🆕 펀드 상품별 수익률 데이터 (그래프 2)
-interface FundComparisonData {
-  name: string;
-  return_rate: number;
-}
 
 // ----------------------------------------------------
 // 4-1. [수정] 월별 자산 추이 그래프 (LineChart - Dual Y-Axis)
@@ -479,7 +465,7 @@ const InvestmentTrendChart: React.FC<{ data: TrendChartData[] }> = ({ data }) =>
             axisLine={{ stroke: "#e0e0e0" }}
             tickLine={false}
           />
-          
+
           {/* Y축 1 (왼쪽): 예금, 적금, 총 자산용 - 로그 스케일 유지 */}
           <YAxis
             yAxisId="left" // ID 설정
@@ -521,22 +507,22 @@ const InvestmentTrendChart: React.FC<{ data: TrendChartData[] }> = ({ data }) =>
 
           {/* 예금 잔액 (왼쪽 Y축 사용) */}
           <Line
-            yAxisId="left" 
+            yAxisId="left"
             type="monotone"
             dataKey="deposit_balance"
             name="예금 잔액"
-            stroke="#4FC3F7" 
+            stroke="#4FC3F7"
             strokeWidth={2}
             dot={{ r: 3, strokeWidth: 0 }}
             activeDot={{ r: 5 }}
           />
           {/* 적금 잔액 (왼쪽 Y축 사용) */}
           <Line
-            yAxisId="left" 
+            yAxisId="left"
             type="monotone"
             dataKey="savings_balance"
             name="적금 잔액"
-            stroke="#5C6BC0" 
+            stroke="#5C6BC0"
             strokeWidth={2}
             dot={{ r: 3, strokeWidth: 0 }}
             activeDot={{ r: 5 }}
