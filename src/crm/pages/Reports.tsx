@@ -394,7 +394,7 @@ const SpendPieChart: React.FC<{ data: ChartDataArray[] }> = ({ data }) => {
   return (
     <Box sx={{ width: "100%", height: 350 }}>
       <ResponsiveContainer>
-        <PieChart margin={{ bottom: 10 }}>
+        <PieChart margin={{ top: 10, right: 10, left: 10, bottom: 10 }}>
           <Pie
             data={chartData}
             dataKey="value"
@@ -1176,10 +1176,7 @@ export default function Reports() {
     setSelectedReport(report);
   };
 
-  const handleBack = () => {
-    setSelectedReport(null);
-    setError(null);
-  };
+
 
   if (loading && reports.length === 0) {
     return (

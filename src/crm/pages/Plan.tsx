@@ -22,11 +22,6 @@ interface Message {
   formData?: PlanFormData;  // 제출된 폼 데이터
 }
 
-interface ConversationHistory {
-  id: string;
-  title: string;
-  timestamp: string;
-}
 
 const initialMessages: Message[] = [
   {
@@ -42,35 +37,9 @@ const initialMessages: Message[] = [
 ];
 
 
-const conversationHistory: ConversationHistory[] = [
-  {
-    id: "conv-1",
-    title: "Q3 Sales Analysis",
-    timestamp: "Today",
-  },
-  {
-    id: "conv-2",
-    title: "Customer Insights Discussion",
-    timestamp: "Yesterday",
-  },
-  {
-    id: "conv-3",
-    title: "Revenue Forecasting",
-    timestamp: "2 days ago",
-  },
-  {
-    id: "conv-4",
-    title: "Market Trends Overview",
-    timestamp: "1 week ago",
-  },
-];
 
-const suggestedPrompts = [
-  "안녕하세요!",
-  "오늘 날씨가 어떤가요?",
-  "Python에 대해 설명해주세요",
-  "재미있는 이야기 해주세요",
-];
+
+
 
 // 백엔드 API URL
 const API_BASE_URL = "http://localhost:8080/chat/plan";
@@ -88,8 +57,7 @@ export default function Plan() {
 
   const [messages, setMessages] = React.useState<Message[]>(initialMessages);
 
-  // 세션 ID 관리: localStorage에서 가져오거나 새로 생성
-  const [activeConversationId, setActiveConversationId] = React.useState(() => {
+  const [activeConversationId] = React.useState(() => {
     if (typeof window !== "undefined") {
       const stored = localStorage.getItem("active_conversation_id");
       if (stored) {
@@ -259,21 +227,13 @@ export default function Plan() {
   const handleNewChat = () => {
     const newSessionId = `conv-${Date.now()}`;
     setMessages(initialMessages);
-    setActiveConversationId(newSessionId);
     // localStorage에 새 세션 ID 저장
     if (typeof window !== "undefined") {
       localStorage.setItem("active_conversation_id", newSessionId);
     }
   };
 
-  const handleSelectConversation = (id: string) => {
-    setActiveConversationId(id);
-    setMessages(initialMessages);
-  };
 
-  const handleDeleteConversation = (id: string) => {
-    console.log("Deleted conversation:", id);
-  };
 
   return (
     <Box
@@ -300,11 +260,7 @@ export default function Plan() {
             name: displayName, // ✅ 현재 로그인한 사용자 이름
             email: displayEmail, // ✅ (있다면) 현재 사용자 이메일
           }}
-          conversationHistory={conversationHistory}
           onNewChat={handleNewChat}
-          onSelectConversation={handleSelectConversation}
-          onDeleteConversation={handleDeleteConversation}
-          activeConversationId={activeConversationId}
         />
       </Box>
 
@@ -398,7 +354,7 @@ export default function Plan() {
         {/* 하단 입력 영역 */}
         <ChatInputArea
           onSendMessage={handleSendMessage}
-          suggestedPrompts={suggestedPrompts}
+          suggestedPrompts={[]}
           onSuggestedPromptClick={(prompt) => handleSendMessage(prompt)}
           disabled={isLoading}
         />
