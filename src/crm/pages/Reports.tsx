@@ -36,10 +36,6 @@ import {
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
 const REPORTS_API_URL = `${BACKEND_URL}/reports/`;
 
-// 리포트 생성용 (Agent 서버)
-const AGENT_URL = import.meta.env.VITE_AGENT_URL || "http://localhost:8080";
-const AGENT_API_URL = `${AGENT_URL}/chat/report`;
-
 // [차트 데이터 타입]: Backend에서 JSON 문자열로 저장하는 배열 구조
 interface ChartDataArray {
   category: string;
@@ -1115,12 +1111,12 @@ export default function Reports() {
     const targetUserId = 1;
     const targetYearMonth = "2025-10";
 
-    // ✅ [수정] Agent 서버 스펙에 맞춘 요청 본문
-    const requestData = {
-      message: `${targetUserId}번 사용자의 ${targetYearMonth}월 레포트를 작성해줘`,
-      session_id: `report-${Date.now()}`,
-      graph: "report",  // 🆕 report 그래프 지정
-    };
+    // ✅ [수정] Agent 서버 스펙에 맞춘 요청 본문 - 현재 사용 안 함
+    // const requestData = {
+    //   message: `${targetUserId}번 사용자의 ${targetYearMonth}월 레포트를 작성해줘`,
+    //   session_id: `report-${Date.now()}`,
+    //   graph: "report",  // 🆕 report 그래프 지정
+    // };
 
     if (!window.confirm(`${targetUserId}번 사용자의 ${targetYearMonth}월 리포트를 생성하시겠습니까?`)) {
       return;
