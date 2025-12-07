@@ -41,8 +41,9 @@ const initialMessages: Message[] = [
 
 
 
-// 백엔드 API URL
-const API_BASE_URL = "http://localhost:8080/chat/plan";
+// 백엔드 API URL (환경 변수 사용)
+const AGENT_URL = import.meta.env.VITE_AGENT_URL || "http://localhost:8080";
+const API_BASE_URL = `${AGENT_URL}/chat/plan`;
 
 export default function Plan() {
   // ✅ 현재 로그인한 사용자 정보 (AuthContext)

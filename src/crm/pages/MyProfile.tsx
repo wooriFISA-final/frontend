@@ -25,11 +25,13 @@ export default function MyProfile() {
 
   React.useEffect(() => {
     const fetchProfile = async () => {
+      const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
+
       try {
         setLoading(true);
         setError(null);
 
-        const res = await fetch("http://localhost:8000/members/me", {
+        const res = await fetch(`${BACKEND_URL}/members/me`, {
           headers: {
             Authorization: `Bearer ${accessToken}`,
           },

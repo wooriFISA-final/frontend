@@ -33,9 +33,8 @@ import {
 // 1. API 설정 + 타입 정의
 // ----------------------------------------------------
 // 리포트 목록 조회용 (백엔드 서버)
-const REPORTS_API_URL = "http://localhost:8000/reports/";
-// 리포트 생성용 (Agent 서버)
-// const AGENT_API_URL = "http://localhost:8080/chat/report";
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
+const REPORTS_API_URL = `${BACKEND_URL}/reports/`;
 
 // [차트 데이터 타입]: Backend에서 JSON 문자열로 저장하는 배열 구조
 interface ChartDataArray {
@@ -1112,7 +1111,7 @@ export default function Reports() {
     const targetUserId = 1;
     const targetYearMonth = "2025-10";
 
-    // ✅ [수정] Agent 서버 스펙에 맞춘 요청 본문
+    // ✅ [수정] Agent 서버 스펙에 맞춘 요청 본문 - 현재 사용 안 함
     // const requestData = {
     //   message: `${targetUserId}번 사용자의 ${targetYearMonth}월 레포트를 작성해줘`,
     //   session_id: `report-${Date.now()}`,
