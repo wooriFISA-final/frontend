@@ -4,7 +4,9 @@ import { useNavigate } from "react-router-dom";
 import { Box, Button, TextField, Typography, Stack, Paper, Tabs, Tab } from "@mui/material";
 import { useAuth } from "./AuthContext";
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://127.0.0.1:8000";
+// const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://127.0.0.1:8000";
+const BACKEND_URL = "http://localhost:8000";
+
 
 export default function AuthPage() {
   const [tab, setTab] = useState(0); // 0: 로그인, 1: 회원가입

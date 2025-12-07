@@ -57,7 +57,7 @@ export default function Plan() {
 
   const [messages, setMessages] = React.useState<Message[]>(initialMessages);
 
-  const [activeConversationId] = React.useState(() => {
+  const [activeConversationId, setActiveConversationId] = React.useState(() => {
     if (typeof window !== "undefined") {
       const stored = localStorage.getItem("active_conversation_id");
       if (stored) {
@@ -227,10 +227,13 @@ export default function Plan() {
   const handleNewChat = () => {
     const newSessionId = `conv-${Date.now()}`;
     setMessages(initialMessages);
+    // state 업데이트
+    setActiveConversationId(newSessionId);
     // localStorage에 새 세션 ID 저장
     if (typeof window !== "undefined") {
       localStorage.setItem("active_conversation_id", newSessionId);
     }
+    console.log(`🔄 새 채팅 시작: ${newSessionId}`);
   };
 
 
